@@ -1,4 +1,8 @@
 'use strict';
+const pageText = JSON.parse(document.getElementById('site-text').textContent);
+function formatText(template, values) {
+  return template.replace(/\{(\w+)\}/g, (match, key) => values[key] ?? match);
+}
 const progress = document.querySelector('.progress');
 const sections = [...document.querySelectorAll('article section[id]')];
 const links = [...document.querySelectorAll('.toc a[href^="#"]')];
@@ -29,13 +33,15 @@ function drawKernel() {
   ctx.fillStyle='#626b76';ctx.font='14px -apple-system, sans-serif';ctx.textAlign='center';
   [0,11,22].forEach(i=>{ctx.fillText(String(i),start+i*cell+cell/2,22);ctx.fillText(String(i),16,start+i*cell+cell/2+5);});
   document.getElementById('sigma-value').textContent=String(sigma);
-  document.getElementById('kernel-description').textContent=`At 7 frames apart, similarity is ${Math.exp(-7/sigma).toFixed(2)}. ${sigma<5?'A narrow band emphasizes nearby observations.':sigma>12?'A wide band keeps distant observations more similar.':'A wider band preserves similarity across longer separations.'}`;
-  canvas.setAttribute('aria-label',`Temporal similarity matrix for 23 observations with bandwidth ${sigma}. Similarity at a separation of 7 frames is ${Math.exp(-7/sigma).toFixed(2)}.`);
+  const similarity = Math.exp(-7/sigma).toFixed(2);
+  const band = sigma < 5 ? pageText.explorer.narrow : sigma > 12 ? pageText.explorer.wide : pageText.explorer.medium;
+  document.getElementById('kernel-description').textContent = formatText(pageText.explorer.description, {similarity, band});
+  canvas.setAttribute('aria-label', formatText(pageText.explorer.aria, {sigma, similarity}));
 }
 slider?.addEventListener('input',drawKernel);drawKernel();
 // Shuffle the equal-contribution pair only; keep the other authors in paper order.
 const equalAuthors = document.getElementById('equal-author-names');
-if (equalAuthors && Math.random() < .5) equalAuthors.prepend(equalAuthors.lastElementChild);
+if (equalAuthors && equalAuthors.children.length > 1 && Math.random() < .5) equalAuthors.prepend(equalAuthors.lastElementChild);
 for (const element of document.querySelectorAll('.math-tex')) {
   katex.render(element.textContent, element, {displayMode:element.dataset.display==='true',throwOnError:true,trust:false,output:'htmlAndMathml'});
 }
@@ -48,7 +54,7 @@ for (const link of document.querySelectorAll('[data-zoom]')) {
     event.preventDefault();
     expanded.alt = link.querySelector('img').alt;
     expanded.src = link.dataset.zoom;
-    dialog.setAttribute('aria-label', link.dataset.title + '. Press Escape or click to close.');
+    dialog.setAttribute('aria-label', link.dataset.title + '. ' + pageText.figure_close_hint);
     previousOverflow = document.documentElement.style.overflow;
     document.documentElement.style.overflow = 'hidden';
     dialog.showModal();

@@ -1,0 +1,40 @@
+<!doctype html>
+<!-- Generated from content.md. Edit that file, then run scripts/build.py. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="{{description}}">
+  <meta name="theme-color" content="#315c91">
+  <title>{{title}}</title>
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg?v=3">
+  <link rel="stylesheet" href="assets/katex/katex.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&amp;family=Noto+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script id="site-text" type="application/json">{{interactive_text}}</script>
+  <script src="assets/katex/katex.min.js" defer></script>
+  <script src="script.js" defer></script>
+</head>
+<body id="top">
+  <a class="skip" href="#overview">{{skip}}</a>
+  <div class="progress" aria-hidden="true"></div>
+  <header class="masthead">
+    <a class="brand" href="#top" aria-label="{{back_to_top}}"><img class="brand-graph" src="assets/favicon.svg?v=3" width="28" height="28" alt=""></a>
+    <nav class="top-links" aria-label="{{resources}}">{{navigation}}</nav>
+  </header>
+  <main>
+    {{hero}}
+    {{teaser}}
+    <div class="metrics" aria-label="{{metrics_aria}}">{{metrics}}</div>
+    <details class="mobile-nav"><summary>{{contents}}</summary><nav aria-label="{{contents_aria}}">{{contents_links}}</nav></details>
+    <div class="article-layout">
+      <aside class="toc"><div class="toc-title">{{contents}}</div><nav aria-label="{{contents_aria}}">{{contents_links}}</nav></aside>
+      <article class="article">{{article}}</article>
+    </div>
+  </main>
+  <footer><span>{{title}}</span><a href="#top">{{back_to_top}}</a></footer>
+  <dialog id="figure-dialog" aria-label="{{expanded_figure}}" tabindex="-1"><img id="expanded-figure" alt="" draggable="false"></dialog>
+</body>
+</html>
