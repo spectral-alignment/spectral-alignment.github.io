@@ -133,7 +133,7 @@ def render_body(body, config):
         if label:
             label.name = 'span'
             label['class'] = 'figure-label'
-        element.replace_with(BeautifulSoup(f'''<figure><a class="figure-link" href="{escape(figure['fallback'])}" data-zoom="{escape(figure['zoom'])}" data-title="{escape(figure['title'])}" data-expand-label="{escape(config['ui']['expand_figure'])}"><img src="{escape(figure['image'])}" width="{figure['width']}" height="{figure['height']}"{loading} alt="{escape(figure['alt'])}"></a><figcaption>{caption_soup}</figcaption></figure>''', 'html.parser'))
+        element.replace_with(BeautifulSoup(f'''<figure><a class="figure-link" href="{escape(figure['fallback'])}" data-zoom="{escape(figure['zoom'])}" data-title="{escape(figure['title'])}"><img src="{escape(figure['image'])}" width="{figure['width']}" height="{figure['height']}"{loading} alt="{escape(figure['alt'])}"></a><figcaption>{caption_soup}</figcaption></figure>''', 'html.parser'))
     for element in soup.select('[data-table]'):
         table_config = config['tables'][element['data-table']]
         del element['data-table']
@@ -213,7 +213,7 @@ def build(content_path, output_path):
     contents = ''.join(f'<a href="#{escape(item["id"])}">{escape(item["label"])}</a>' for item in config['contents'])
     metrics = ''.join(f'<div class="metric"><div class="value"><span>{escape(m["before"])}</span><strong>{escape(m["after"])}</strong></div><p>{escape(m["label"])}</p><small>{escape(m["change"])}</small></div>' for m in config['metrics'])
     image = config['metrics_image']
-    metrics_image = f'<a class="figure-link metrics-environments" href="{escape(image["image"])}" data-zoom="{escape(image["image"])}" data-title="{escape(image["title"])}" data-expand-label="{escape(config["ui"]["expand_figure"])}"><img src="{escape(image["image"])}" width="{image["width"]}" height="{image["height"]}" alt="{escape(image["alt"])}"></a>'
+    metrics_image = f'<a class="figure-link metrics-environments" href="{escape(image["image"])}" data-zoom="{escape(image["image"])}" data-title="{escape(image["title"])}"><img src="{escape(image["image"])}" width="{image["width"]}" height="{image["height"]}" alt="{escape(image["alt"])}"></a>'
     interactive_text = json.dumps({'explorer': config['explorer'], 'figure_close_hint': config['ui']['figure_close_hint']}, ensure_ascii=False).replace('<', '\\u003c')
     values = dict({key: escape(value) for key, value in config['ui'].items()}, title=escape(' '.join(title_lines)), description=escape(config['description']), hero=hero,
                   navigation=navigation, contents_links=contents, metrics=metrics, metrics_image=metrics_image, teaser=teaser, article=article,

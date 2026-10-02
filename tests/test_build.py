@@ -36,7 +36,7 @@ class MarkdownPublishingTests(unittest.TestCase):
         config['metrics'][0]['after'] = '69%'
         config['figures']['pipeline']['alt'] = 'Updated figure description.'
         config['explorer']['wide'] = 'Updated slider explanation.'
-        config['ui']['expand_figure'] = 'Enlarge image'
+        config['ui']['expanded_figure'] = 'Image preview'
         body = body.replace('## What should a world model preserve?', '## Updated introduction')
         body = body.replace('A world model needs enough information', 'An updated world model needs enough information')
         body = body.replace('**Figure 1. Planning success.**', '**Updated planning caption.**')
@@ -57,7 +57,7 @@ class MarkdownPublishingTests(unittest.TestCase):
         self.assertIn('Updated planning caption.', page.select_one('#results figcaption').get_text())
         self.assertEqual(page.select_one('#representations tbody strong').string, '0.94')
         self.assertTrue(page.select_one('.equation .math-tex').string.startswith(r'J_{ij}=\exp'))
-        self.assertEqual(page.select_one('.figure-link')['data-expand-label'], 'Enlarge image')
+        self.assertEqual(page.select_one('#figure-dialog')['aria-label'], 'Image preview')
         interactive = json.loads(page.select_one('#site-text').string)
         self.assertEqual(interactive['explorer']['wide'], 'Updated slider explanation.')
 

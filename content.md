@@ -171,7 +171,6 @@ ui:
   contents: In this article
   contents_aria: Article contents
   metrics_aria: 'CEM planning success: LeWorldModel compared with temporal SpecWM'
-  expand_figure: Expand figure
   expanded_figure: Enlarged figure
   figure_close_hint: Press Escape or click to close.
 explorer:
