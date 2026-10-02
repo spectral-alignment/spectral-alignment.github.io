@@ -27,7 +27,3 @@
 
 /* Long inline theorem expressions scroll within the mobile text column. */
 @media(max-width:600px){.theory-result .math-tex:not([data-display]){display:inline-block;max-width:100%;overflow-x:auto;overflow-y:hidden;vertical-align:middle}}
-
-.metrics-environments{grid-column:1/-1;display:block;margin-bottom:24px}
-.metrics-environments img{display:block;width:100%;height:auto}
-@media(max-width:760px){.metrics-environments{margin-bottom:18px}}

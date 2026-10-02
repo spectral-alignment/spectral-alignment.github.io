@@ -59,12 +59,6 @@ contents:
 - id: theory
   label: Theory
   section_label: THEORY
-metrics_image:
-  image: assets/environments.png
-  title: The three evaluation environments
-  alt: OGBench Cube, OGBench Scene, and CALVIN, in the same order as the planning scores below.
-  width: 2500
-  height: 919
 metrics:
 - before: 52%
   after: 68%
@@ -79,6 +73,15 @@ metrics:
   label: CALVIN
   change: +22 percentage points
 figures:
+  environments:
+    image: assets/environments.png
+    zoom: assets/environments.png
+    fallback: assets/environments.png
+    title: The three evaluation environments
+    alt: OGBench Cube, OGBench Scene, and CALVIN.
+    width: 2500
+    height: 919
+    loading: lazy
   pipeline:
     image: assets/pipeline.png
     zoom: assets/pipeline.svg
@@ -291,6 +294,10 @@ CALVIN uses bandwidths of 7 and 45 sampled observations. The extra frames come f
 We also try a quasimetric kernel. Its learned distance estimates the minimum number of steps needed to get between states, rather than the separation we happened to observe in a trajectory. This gives us another teacher to compare, though learning the distance can introduce errors.
 
 ## Planning with SpecWM {#results}
+
+:::figure environments
+**Evaluation environments.** OGBench Cube, OGBench Scene, and CALVIN.
+:::
 
 SpecWM improves planning success over LeWorldModel with both temporal and quasimetric kernels, by an average of 21 percentage points. The planner scores predicted outcomes by their similarity to the goal. Our objective trains that similarity to reflect temporal or quasimetric proximity.
 

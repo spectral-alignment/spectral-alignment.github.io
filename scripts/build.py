@@ -212,11 +212,9 @@ def build(content_path, output_path):
     navigation = ''.join(resource(config, item['link']) if 'link' in item else f'<a href="{escape(item["url"])}">{escape(item["label"])}</a>' for item in config['navigation'])
     contents = ''.join(f'<a href="#{escape(item["id"])}">{escape(item["label"])}</a>' for item in config['contents'])
     metrics = ''.join(f'<div class="metric"><div class="value"><span>{escape(m["before"])}</span><strong>{escape(m["after"])}</strong></div><p>{escape(m["label"])}</p><small>{escape(m["change"])}</small></div>' for m in config['metrics'])
-    image = config['metrics_image']
-    metrics_image = f'<a class="figure-link metrics-environments" href="{escape(image["image"])}" data-zoom="{escape(image["image"])}" data-title="{escape(image["title"])}"><img src="{escape(image["image"])}" width="{image["width"]}" height="{image["height"]}" alt="{escape(image["alt"])}"></a>'
     interactive_text = json.dumps({'explorer': config['explorer'], 'figure_close_hint': config['ui']['figure_close_hint']}, ensure_ascii=False).replace('<', '\\u003c')
     values = dict({key: escape(value) for key, value in config['ui'].items()}, title=escape(' '.join(title_lines)), description=escape(config['description']), hero=hero,
-                  navigation=navigation, contents_links=contents, metrics=metrics, metrics_image=metrics_image, teaser=teaser, article=article,
+                  navigation=navigation, contents_links=contents, metrics=metrics, teaser=teaser, article=article,
                   interactive_text=interactive_text)
     template = (ROOT / 'site/template.html').read_text()
     result = re.sub(r'\{\{(\w+)\}\}', lambda m: values[m.group(1)], template)
