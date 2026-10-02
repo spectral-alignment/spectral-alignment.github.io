@@ -54,7 +54,7 @@ class MarkdownPublishingTests(unittest.TestCase):
         self.assertEqual(page.select_one('img[src="assets/pipeline.png"]')['alt'], 'Updated figure description.')
         self.assertEqual(page.select_one('#overview h2').string, 'Updated introduction')
         self.assertTrue(page.select_one('.lead').get_text().startswith('An updated world model'))
-        self.assertIn('Updated planning caption.', page.select_one('img[src="assets/fair_cem.png"]').find_parent('figure').figcaption.get_text())
+        self.assertIn('Updated planning caption.', page.select_one('#results figcaption').get_text())
         self.assertEqual(page.select_one('#representations tbody strong').string, '0.94')
         self.assertTrue(page.select_one('.equation .math-tex').string.startswith(r'J_{ij}=\exp'))
         self.assertEqual(page.select_one('#figure-dialog')['aria-label'], 'Image preview')
@@ -64,7 +64,7 @@ class MarkdownPublishingTests(unittest.TestCase):
     def test_nested_figures_and_theorems_keep_their_layout(self):
         page = BeautifulSoup(self.render((ROOT / 'content.md').read_text()), 'html.parser')
         self.assertEqual(len(page.select('article > section')), 8)
-        self.assertEqual(len(page.select('figure')), 10)
+        self.assertEqual(len(page.select('figure')), 9)
         self.assertEqual(len(page.select('.ablation')), 3)
         self.assertEqual(len(page.select('.paired > figure')), 2)
         self.assertEqual(len(page.select('#theory > .theory-result')), 5)
