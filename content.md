@@ -59,6 +59,12 @@ contents:
 - id: theory
   label: Theory
   section_label: THEORY
+metrics_image:
+  image: assets/environments.png
+  title: The three evaluation environments
+  alt: OGBench Cube, OGBench Scene, and CALVIN, in the same order as the planning scores below.
+  width: 2500
+  height: 919
 metrics:
 - before: 52%
   after: 68%
