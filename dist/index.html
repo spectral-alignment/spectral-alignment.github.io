@@ -195,10 +195,11 @@ We generate failure data for each environment and append it to the canonical dat
 
 <p class="table-caption">Selected columns from the paper’s Table 1: linear probe <span class="math-tex">R^2</span> on held-out OGBench Scene episodes. <sup>1</sup>Relationships within trajectories only. <sup>2</sup>Relationships specified across states.</p>
 
-<p>For the fully specified kernels, kernel eigenvectors are strongly recoverable from the learned embeddings. Recovery is strongest for the leading eigenvectors and decreases for those associated with smaller eigenvalues.</p>
-<figure><a class="figure-link" data-title="Recovering kernel eigenvectors from learned embeddings" data-zoom="assets/spectral_conversion.svg" href="assets/spectral_conversion.pdf"><img alt="Kernel eigenvector probe curves for state, proprioception and depth targets; fully specified targets generally recover eigenvectors better than underspecified targets or an untrained encoder." height="757" loading="lazy" src="assets/spectral_conversion.png" width="2200"/></a><figcaption>
+<figure><a class="figure-link" data-title="Recovering kernel eigenvectors from learned embeddings" data-zoom="assets/spectral_conversion.png" href="assets/spectral_conversion.png"><img alt="Kernel eigenvector probe curves for state, proprioception and depth targets; fully specified targets generally recover eigenvectors better than underspecified targets or an untrained encoder." height="278" loading="lazy" src="assets/spectral_conversion.png" width="809"/></a><figcaption>
 <span class="figure-label">Figure 3. Spectral recovery.</span> Linear probe <span class="math-tex">R^2</span> between kernel eigenvectors and embeddings from encoders trained on fully specified state, proprioception, and depth. Underspecified variants and an untrained encoder are included for comparison.
 </figcaption></figure>
+<p>The spectral-recovery result below characterizes optimal embeddings through the teacher kernel’s eigenvectors, up to row scaling and an orthogonal transformation. Here, we test that connection by fitting linear probes to recover each eigenvector from the learned representations. Recovery is strongest for the leading eigenvectors and decreases for directions associated with smaller eigenvalues.</p>
+<p>The state kernel’s lower recovery scores at later indices largely reflect its less even spectrum: most of its energy is concentrated in the leading directions. Weighting each eigenvector’s probe <span class="math-tex">R^2</span> by its normalized eigenvalue gives mean scores of <strong>0.965 for state, 0.987 for proprioception, and 0.992 for depth</strong>. The models therefore recover the directions carrying most of the kernel’s energy particularly well.</p>
 </section><section id="ablations"><span class="section-num">06 / ABLATIONS</span><h2>Additional ablations</h2>
 <details class="ablation" open="open">
 <p><summary>Failure data</summary></p>
@@ -231,35 +232,70 @@ We generate failure data for each environment and append it to the canonical dat
 <p>Pursuing a better understanding of the mechanisms enabling effective planning would be valuable. We view the study of which kernels are most conducive to large-scale self-supervised training as the next primary direction of work. Kernels involving language for semantic distances are another future direction.</p>
 <div class="actions" style="justify-content:flex-start"><a class="button" href="https://anonymous.4open.science/r/SpecWM/" rel="noopener" target="_blank">Code</a>
 </div>
-</section><section id="theory"><span class="section-num">08 / THEORY</span><h2>Theoretical results</h2>
-<p>We characterize the global optima of the objective, establish conditions for linear recoverability and invariance to nuisance information, and connect temporal-kernel similarity to the behavioral successor measure under an idealized setting. Full proofs are provided in Appendix D of the paper.</p>
+</section><section id="theory"><span class="section-num">08 / THEORY</span><h2>Theoretical analysis</h2>
+<p>The teacher kernel specifies which relationships the encoder should preserve. We now ask what matching those relationships implies: which representations minimize the loss, which quantities a linear probe can recover, when irrelevant information disappears, and why temporal similarity can help planning. The results below describe idealized optima under explicit assumptions; full proofs appear in the paper’s proofs appendix.</p>
+<h3>The spectral loss has a known optimum</h3>
+<p>In the fully specified setting, the teacher defines relationships between every pair of inputs. Its centered, tempered target <span class="math-tex">K^\alpha</span> can be decomposed into eigenvectors and eigenvalues. A spectral embedding uses the retained eigenvectors as coordinates, scaled by the square roots of the target’s eigenvalues. When the embedding dimension is large enough, these coordinates reproduce the target’s pairwise inner products exactly.</p>
 <div class="theory-result" id="spectral-recovery">
 <p><span class="result-label">Theorem 1</span></p>
 <h3>Spectral recovery</h3>
-<p>Suppose <span class="math-tex">m\le d</span> and <span class="math-tex">K^\alpha_{ii}&gt;0</span> for all <span class="math-tex">i</span>. Then <span class="math-tex">\min_H\mathcal L_{\mathrm{spec}}(H)=0</span>, attained exactly at</p>
-<div class="equation"><span class="math-tex" data-display="true">H^\star=\operatorname{diag}(c)\,H_{\mathrm{spec}}\,Q,\qquad c_i&gt;0,\quad Q^\top Q=I.</span></div>
-<p>Here <span class="math-tex">H_{\mathrm{spec}}</span> is the spectral embedding of <span class="math-tex">K^\alpha</span> with square-root eigenvalue scaling, padded to <span class="math-tex">d</span> dimensions, and <span class="math-tex">Q</span> is orthogonal.</p>
+<p>Suppose <span class="math-tex">m\le d</span> and <span class="math-tex">K^\alpha_{ii}&gt;0</span> for every input <span class="math-tex">i</span>. Then the minimum spectral loss is zero, attained exactly at</p>
+<div class="equation"><span class="math-tex" data-display="true">H^\star=\operatorname{diag}(c)\,H_{\mathrm{spec}}\,Q,\qquad c_i&gt;0,\quad Q^\top Q=I_d.</span></div>
+<p>Here <span class="math-tex">m</span> is the number of retained positive spectral directions, <span class="math-tex">d</span> is the encoder dimension, <span class="math-tex">H_{\mathrm{spec}}</span> is the spectral embedding of <span class="math-tex">K^\alpha</span> with square-root eigenvalue scaling, padded to <span class="math-tex">d</span> dimensions, and <span class="math-tex">Q\in\mathbb R^{d\times d}</span> is orthogonal.</p>
 </div>
+<p>The optimum recovers the target’s geometry up to a rotation or reflection and positive scaling of each row. Row scaling remains free because the loss rescales each embedding to the length prescribed by the target diagonal. With fixed-norm encoder outputs, this becomes a row-normalized spectral embedding, up to an orthogonal transformation.</p>
+<p>This gives a way to inspect a kernel before training a neural encoder: compute its spectral embedding and evaluate what its coordinates make accessible. The theorem characterizes the optimum of an embedding table; it does not guarantee that neural-network training reaches that optimum.</p>
+<h3>Downstream probing guarantees</h3>
+<p>A linear probe can recover a quantity exactly when its values lie in the representation’s column space. The spectral characterization therefore connects kernel choice to the information accessible downstream. In particular, a kernel built from label relationships can make the labels themselves linearly recoverable, even though the encoder never directly regresses onto those labels.</p>
 <div class="theory-result" id="linear-recovery">
 <p><span class="result-label">Theorem 2</span></p>
 <h3>Linear recoverability</h3>
-<p>Let <span class="math-tex">Y\in\mathbb R^{n\times p}</span> satisfy <span class="math-tex">\mathbf1^\top Y=0</span>, row norms <span class="math-tex">\|y_i\|=1</span>, and <span class="math-tex">\operatorname{rank}(Y)\le d</span>. For <span class="math-tex">K=YY^\top</span>, <span class="math-tex">\alpha=1</span>, and all positive spectral directions retained, every global minimizer <span class="math-tex">H^\star</span> subject to <span class="math-tex">\|h_i\|=\sqrt d</span> satisfies</p>
+<p>Let <span class="math-tex">Y\in\mathbb R^{n\times p}</span> be centered, with <span class="math-tex">\mathbf1^\top Y=0</span>, unit row norms <span class="math-tex">\|y_i\|=1</span>, and <span class="math-tex">\operatorname{rank}(Y)\le d</span>. Set <span class="math-tex">K=YY^\top</span>, use <span class="math-tex">\alpha=1</span>, and retain all positive spectral directions. Every global minimizer <span class="math-tex">H^\star</span> of the spectral loss subject to <span class="math-tex">\|h_i\|=\sqrt d</span> satisfies</p>
 <div class="equation"><span class="math-tex" data-display="true">\min_{W\in\mathbb R^{d\times p}}\|Y-H^\star W\|_F^2=0.</span></div>
 </div>
+<p>Under these conditions, matching the labels’ pairwise inner products preserves enough information to reconstruct them with a linear map. This motivates teachers built from physical quantities. The exact guarantee applies to the stated label kernel and normalization; it does not imply perfect recovery for every distance-based kernel used in the experiments.</p>
+<h3>Task-irrelevant information</h3>
+<p>Selective invariance means retaining relevant distinctions while dropping details the teacher ignores. Write each observation as <span class="math-tex">x_i=(s_i,n_i)</span>, where <span class="math-tex">s_i</span> is task-relevant state and <span class="math-tex">n_i</span> is nuisance information. For example, a manipulation teacher may depend on object positions while ignoring moving foliage in the background. We ask whether matching that teacher also makes the encoder ignore the foliage.</p>
+<p>Let <span class="math-tex">\nu(\cdot\mid s_i)</span> be the distribution of nuisance values at state <span class="math-tex">s_i</span>, and let <span class="math-tex">Z</span> collect the task-relevant trajectory and teacher metadata. We need a coverage assumption: nuisance values that are individually possible at two states must also be possible together in a trajectory visiting those states.</p>
+<aside class="note">
+<strong>Coverage (A1).</strong> For almost every <span class="math-tex">Z</span>, every pair of distinct indices <span class="math-tex">i,j</span>, and every measurable set <span class="math-tex">E</span> of nuisance pairs, independent draws <span class="math-tex">n\sim\nu(\cdot\mid s_i)</span> and <span class="math-tex">n'\sim\nu(\cdot\mid s_j)</span> satisfy
+<div class="equation"><span class="math-tex" data-display="true">\Pr\big((n,n')\in E\mid s_i,s_j\big)&gt;0
+\quad\Longrightarrow\quad
+\Pr\big((n_i,n_j)\in E\mid Z\big)&gt;0.</span></div>
+Conditioning on a trajectory may change the likelihood of nuisance pairs, but cannot rule out an otherwise possible set of pairs.
+</aside>
+<p>Coverage includes independent sensor noise and correlated disturbances when all otherwise possible combinations remain possible. It excludes a background identity or lighting condition that varies across trajectories but stays fixed within each one. Such a shared attribute could select a rotation for every embedding in a clip without changing their pairwise similarities.</p>
 <div class="theory-result" id="nuisance-invariance">
 <p><span class="result-label">Theorem 3</span></p>
 <h3>Abstraction of task-irrelevant information</h3>
-<p>Write an observation as <span class="math-tex">x=(s,n)</span>, where the target depends on task-relevant state <span class="math-tex">s</span> and is invariant to task-irrelevant <span class="math-tex">n</span>. Assume coverage: nuisance values that are individually possible at two states must also be possible together in a trajectory visiting both states. Under this assumption, fixed-norm encoder outputs, target-diagonal rescaling, a strictly positive target diagonal, and zero expected spectral loss,</p>
+<p>Assume coverage, fixed-norm encoder outputs, and target-diagonal rescaling. If each trajectory’s centered, tempered target <span class="math-tex">K^\alpha</span> has strictly positive diagonal entries almost surely and <span class="math-tex">\mathbb E[\mathcal L_{\mathrm{spec}}]=0</span>, then</p>
 <div class="equation"><span class="math-tex" data-display="true">f_\theta((s_i,n))=f_\theta((s_i,n'))</span></div>
-<p>for almost every clip, every frame <span class="math-tex">i</span>, and almost every pair of independent nuisance draws at <span class="math-tex">s_i</span>. Varying the task-irrelevant component while holding the task-relevant component fixed leaves the representation unchanged.</p>
+<p>for almost every clip, every frame <span class="math-tex">i</span>, and almost every pair <span class="math-tex">(n,n')</span> drawn independently from <span class="math-tex">\nu(\cdot\mid s_i)</span>.</p>
 </div>
+<p>At zero expected loss, changing the nuisance component while holding the relevant state fixed leaves the representation unchanged. Coverage lets us vary nuisance draws while preserving the teacher’s inner products; centering forces the rescaled embeddings to sum to zero, preventing one such draw from changing its embedding independently. This result assumes target-diagonal rescaling, which is omitted in our practical underspecified training variant.</p>
+<h3>Temporal kernels and the successor measure</h3>
+<p>Temporal supervision uses only how far apart observations occur in a trajectory. To understand its connection to planning, we move from a free embedding table to a state-conditioned encoder <span class="math-tex">h:\mathcal S\to\{z\in\mathbb R^d:\|z\|=1\}</span>. The behavioral successor measure counts discounted future visits under the data-collection policy:</p>
+<div class="equation"><span class="math-tex" data-display="true">M^\beta(x,x')=\sum_{t=0}^{\infty}\gamma^t\Pr(x_t=x'\mid x_0=x,\pi_\beta),\qquad \gamma=e^{-1/\sigma}\in(0,1).</span></div>
+<p>Assume a finite state space and a stationary Markov policy <span class="math-tex">\pi_\beta</span> whose induced chain <span class="math-tex">P</span> is irreducible and aperiodic. Its stationary distribution is <span class="math-tex">\mu</span>, and trajectories start with <span class="math-tex">x_0\sim\mu</span>. Sample both indices uniformly from a length-<span class="math-tex">T</span> trajectory. For this analysis, omit student and teacher centering, teacher tempering, and spectral truncation.</p>
+<p>Writing <span class="math-tex">s(x,x')=h(x)^\top h(x')</span>, the population loss is</p>
+<div class="equation"><span class="math-tex" data-display="true">\mathcal L_{\mathrm{spec}}^{\mathrm{pop}}(h)=\mathbb E_{\tau,i,j}\left[\big(s(x_i,x_j)-\gamma^{|i-j|}\big)^2\right].</span></div>
+<p>The same state pair can occur at different temporal separations. Define its expected teacher similarity as</p>
+<div class="equation"><span class="math-tex" data-display="true">R_T(x,x')=\mathbb E\left[\gamma^{|i-j|}\mid x_i=x,\ x_j=x'\right].</span></div>
+<p>A conditional bias–variance decomposition separates the loss into regression onto <span class="math-tex">R_T</span> and a term independent of the encoder. Minimizing the population loss is therefore equivalent to minimizing the expected squared error between embedding similarity and <span class="math-tex">R_T</span>. The next result identifies this target for long trajectories.</p>
 <div class="theory-result" id="successor-measure">
 <p><span class="result-label">Theorem 4</span></p>
 <h3>Population target</h3>
-<p>Consider a finite, stationary, irreducible, aperiodic Markov chain under policy <span class="math-tex">\pi_\beta</span>, with stationary distribution <span class="math-tex">\mu</span>. For this result, omit centering, tempering, and truncation. Let <span class="math-tex">\gamma=e^{-1/\sigma}</span> and <span class="math-tex">M^\beta(x,x')=\sum_{t\ge0}\gamma^t\Pr(x_t=x'\mid x_0=x,\pi_\beta)</span> be the behavioral successor measure. For uniformly sampled indices in a length-<span class="math-tex">T</span> trajectory, define <span class="math-tex">R_T(x,x')=\mathbb E[\gamma^{|i-j|}\mid x_i=x,x_j=x']</span>. Then</p>
-<div class="equation"><span class="math-tex" data-display="true">\begin{aligned}T R_T(x,x')\xrightarrow[T\to\infty]{}&amp;\frac{M^\beta(x,x')}{\mu(x')}+\frac{M^\beta(x',x)}{\mu(x)}\\&amp;-\frac{\mathbf1[x=x']}{\mu(x)}.\end{aligned}</span></div>
-<p>For a reversible chain, the two successor terms are equal. This relates the planning score to discounted visitation between predicted states and the goal, in both temporal directions and relative to their stationary frequencies.</p>
+<p>Under the assumptions above, for every pair <span class="math-tex">x,x'\in\mathcal S</span>,</p>
+<div class="equation"><span class="math-tex" data-display="true">\begin{aligned}
+T R_T(x,x')\xrightarrow[T\to\infty]{}&amp;\frac{M^\beta(x,x')}{\mu(x')}+\frac{M^\beta(x',x)}{\mu(x)}\\
+&amp;-\frac{\mathbf1[x=x']}{\mu(x)}.
+\end{aligned}</span></div>
+<p>If the chain is reversible, with <span class="math-tex">\mu(x)P(x'\mid x)=\mu(x')P(x\mid x')</span>, this simplifies to</p>
+<div class="equation"><span class="math-tex" data-display="true">T R_T(x,x')\xrightarrow[T\to\infty]{}\frac{2M^\beta(x,x')}{\mu(x')}-\frac{\mathbf1[x=x']}{\mu(x')}.</span></div>
 </div>
+<p>The temporal target thus contains a symmetrized successor measure, normalized by stationary state frequencies. It reflects discounted visitation in both temporal directions, relative to how common each state is in the data. This connects the similarity score used in planning to how readily states lead to one another under the behavior policy, within the idealized setting above.</p>
+<h3>Comparing kernels for linear probing</h3>
+<p>The paper’s additional kernel-dominance result asks when one kernel is at least as useful as another for every linear probe target. At a zero-loss optimum with fixed row norms, the encoder’s column space is determined by the target’s cosine Gram matrix. Dominance therefore amounts to inclusion of the spaces of linearly recoverable targets.</p>
 <div class="theory-result" id="kernel-dominance">
 <p><span class="result-label">Theorem 5 · Appendix</span></p>
 <h3>Kernel dominance</h3>
