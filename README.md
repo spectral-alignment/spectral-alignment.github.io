@@ -1,6 +1,6 @@
 # World Modeling through Spectral Alignment
 
-Project website for SpecWM, a world model trained to preserve teacher-defined similarities between observations.
+Project website for SpecWM, a world model trained to preserve target similarities between observations.
 
 [Website](https://spectral-alignment.github.io/)
 

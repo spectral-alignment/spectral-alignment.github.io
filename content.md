@@ -3,7 +3,7 @@
 title: |
   World Modeling through
   Spectral Alignment
-description: What information should a latent world model preserve? SpecWM explicitly specifies desired relationships between observations through a teacher similarity kernel.
+description: What information should a latent world model preserve? SpecWM explicitly specifies desired relationships between observations through a target similarity kernel.
 subtitle: What information should a latent world model preserve?
 authors:
 - name: Holger Molin
@@ -110,7 +110,7 @@ figures:
     zoom: assets/spectral_conversion.svg
     fallback: assets/spectral_conversion.pdf
     title: Recovering kernel eigenvectors from learned embeddings
-    alt: Kernel eigenvector probe curves for state, proprioception and depth teachers; fully specified teachers generally recover eigenvectors better than underspecified teachers or an untrained encoder.
+    alt: Kernel eigenvector probe curves for state, proprioception and depth targets; fully specified targets generally recover eigenvectors better than underspecified targets or an untrained encoder.
     width: 2200
     height: 757
     loading: lazy
@@ -151,11 +151,11 @@ figures:
     height: 2144
     loading: lazy
   abstract_fig:
-    image: assets/abstract_fig.png
-    zoom: assets/abstract_fig.svg
-    fallback: assets/abstract_fig.pdf
+    image: assets/abstract_fig.png?v=2bf3c8bf
+    zoom: assets/abstract_fig.svg?v=2bf3c8bf
+    fallback: assets/abstract_fig.pdf?v=2bf3c8bf
     title: 'Spectral alignment: from pairwise distances to embeddings'
-    alt: Pairwise distances define a teacher similarity matrix. The encoder learns student embeddings whose pairwise similarities match the teacher.
+    alt: Pairwise distances define a target similarity matrix. The encoder learns embeddings whose pairwise similarities match the target.
     width: 2200
     height: 581
 tables:
@@ -189,7 +189,7 @@ explorer:
 ---
 
 :::figure abstract_fig
-**Spectral alignment framework.** Pairwise distances (teacher) between samples define a kernel that an encoder (student) is trained to reconstruct through embedding similarities.
+**Spectral alignment framework.** Pairwise distances between samples define a target similarity kernel. We train the encoder to reconstruct this target through embedding similarities.
 :::
 
 ## What should a world model preserve? {#overview}
@@ -204,7 +204,7 @@ Recent work has made substantial progress toward stable JEPA training through re
 
 We approach this problem through the lens of **spectral representation learning**, which historically focuses on extracting representations from pairwise relationships between samples. Several contrastive and non-contrastive objectives admit spectral interpretations. Building on this perspective, we make the pairwise notion of similarity between two observations the center of a new training objective for latent dynamics modeling.
 
-We introduce a **spectral alignment** framework for training world models to preserve a chosen similarity structure. Using a notion of distances between observations (the *teacher*), we define a target similarity kernel. We then train an encoder (the *student*) to learn embeddings whose pairwise similarities match the target and an action-conditioned predictor to output future latents. We name the resulting world model **SpecWM**.
+We introduce a **spectral alignment** framework for training world models to preserve a chosen similarity structure. Using a notion of distances between observations, we define a target similarity kernel. We then train an encoder to learn embeddings whose pairwise similarities match the target and an action-conditioned predictor to output future latents. We name the resulting world model **SpecWM**.
 
 When some information about the underlying system is known, encoders can be trained based on physical distances, but the natural ordering of states within a trajectory is also sufficient to provide a training signal. Empirically, the choice of kernel strongly controls which physical quantities are recoverable from the representation. Temporal spectral alignment improves planning across OGBench Cube, OGBench Scene, and CALVIN.
 
@@ -222,9 +222,9 @@ $$
 K_{ij}=\exp\!\left(-\frac{d(x_i,x_j)}{\sigma}\right).
 $$
 
-Observations that are close according to $d$ remain distinguishable, while pairs more than a few $\sigma$ apart have similarity near zero. The bandwidth $\sigma$ therefore sets the range of distances the target resolves; we set it to the median teacher distance over the pairs the kernel is defined on.
+Observations that are close according to $d$ remain distinguishable, while pairs more than a few $\sigma$ apart have similarity near zero. The bandwidth $\sigma$ therefore sets the range of distances the target resolves; we set it to the median target distance over the pairs the kernel is defined on.
 
-Given a teacher kernel specifying the desired inner product between every pair of inputs, we can construct a coordinate vector for each input that realizes these pairwise relationships. Such a construction is called a *spectral embedding*. For a symmetric, positive semidefinite kernel $K=U\Lambda U^\top$, a spectral embedding is
+Given a target kernel specifying the desired inner product between every pair of inputs, we can construct a coordinate vector for each input that realizes these pairwise relationships. Such a construction is called a *spectral embedding*. For a symmetric, positive semidefinite kernel $K=U\Lambda U^\top$, a spectral embedding is
 
 $$
 H_{\mathrm{spec}}=U\Lambda^{1/2},\qquad H_{\mathrm{spec}}H_{\mathrm{spec}}^\top=K.
@@ -294,7 +294,7 @@ The extra observations are sampled 300–3,000 raw frames away. We average two c
 
 ### A learned distance
 
-We also evaluate a quasimetric kernel, which estimates temporal distances between observations according to the optimal goal-reaching policy. While this potentially introduces estimation errors, it labels state pairs by the minimum number of steps between states, instead of expressing the temporal separations observed in the data, and can thus compensate for poor data quality. We symmetrize this distance to match the student’s symmetric Gram matrix.
+We also evaluate a quasimetric kernel, which estimates temporal distances between observations according to the optimal goal-reaching policy. While this potentially introduces estimation errors, it labels state pairs by the minimum number of steps between states, instead of expressing the temporal separations observed in the data, and can thus compensate for poor data quality. We symmetrize this distance to match the symmetric Gram matrix of the embeddings.
 
 ## Planning with SpecWM {#results}
 
@@ -332,7 +332,7 @@ To isolate representation quality from prediction accuracy, we evaluate linear p
 
 ### Kernel choice
 
-We extend the investigation to supervised kernels: state, depth, and proprioception. For each, we use the Euclidean distance between the corresponding feature vectors as the teacher distance. The state kernel uses the simulator state underlying each observation. Although this information is generally unavailable in real-world settings, it lets us evaluate a teacher with access to the full physical state.
+We extend the investigation to supervised kernels: state, depth, and proprioception. For each, we use the Euclidean distance between the corresponding feature vectors as the target distance. The state kernel uses the simulator state underlying each observation. Although this information is generally unavailable in real-world settings, it lets us evaluate a target with access to the full physical state.
 
 The fully specified state kernel achieves the highest average $R^2$ (0.93). Under underspecified supervision, the temporal kernel nearly matches the state kernel (0.84 versus 0.85). **Proprioceptive kernels preserve the robot’s configuration but largely omit object states.**
 
@@ -391,7 +391,7 @@ The two world models have different inherent distance metrics in their latent di
 
 ## Conclusion {#discussion}
 
-The core idea is to directly specify the pairwise relationships that representations should preserve through a teacher kernel. We find that readily available kernels result in strong planning performance, which is not entirely correlated with probing accuracy.
+The core idea is to directly specify the pairwise relationships that representations should preserve through a target kernel. We find that readily available kernels result in strong planning performance, which is not entirely correlated with probing accuracy.
 
 Pursuing a better understanding of the mechanisms enabling effective planning would be valuable. We view the study of which kernels are most conducive to large-scale self-supervised training as the next primary direction of work. Kernels involving language for semantic distances are another future direction.
 
@@ -428,7 +428,7 @@ $$
 :::theorem nuisance-invariance | Theorem 3
 ### Abstraction of task-irrelevant information
 
-Write an observation as $x=(s,n)$, where the teacher depends on task-relevant state $s$ and is invariant to task-irrelevant $n$. Assume coverage: nuisance values that are individually possible at two states must also be possible together in a trajectory visiting both states. Under this assumption, fixed-norm encoder outputs, target-diagonal rescaling, a strictly positive target diagonal, and zero expected spectral loss,
+Write an observation as $x=(s,n)$, where the target depends on task-relevant state $s$ and is invariant to task-irrelevant $n$. Assume coverage: nuisance values that are individually possible at two states must also be possible together in a trajectory visiting both states. Under this assumption, fixed-norm encoder outputs, target-diagonal rescaling, a strictly positive target diagonal, and zero expected spectral loss,
 
 $$
 f_\theta((s_i,n))=f_\theta((s_i,n'))
