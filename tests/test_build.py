@@ -41,7 +41,7 @@ class MarkdownPublishingTests(unittest.TestCase):
         body = body.replace('## What should a world model preserve?', '## Updated introduction')
         body = re.sub(r'(?<=:::lead\n).*?(?=\n:::)', 'An updated introduction from Markdown.', body, count=1, flags=re.S)
         body = body.replace('**Figure 1. Planning success.**', '**Updated planning caption.**')
-        body = body.replace('| Scene average | 0.84 | **0.93** |', '| Scene average | 0.84 | **0.94** |')
+        body = body.replace('| OGBench Scene average | 0.84 | **0.93** |', '| OGBench Scene average | 0.84 | **0.94** |')
         body = body.replace(r'K_{ij}=\exp', r'J_{ij}=\exp')
         rendered = self.render('---\n' + yaml.safe_dump(config, allow_unicode=True, sort_keys=False) + '---\n' + body)
         page = BeautifulSoup(rendered, 'html.parser')

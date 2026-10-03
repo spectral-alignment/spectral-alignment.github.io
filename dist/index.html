@@ -25,12 +25,12 @@
     <nav class="top-links" aria-label="Resources"><a href="https://anonymous.4open.science/r/SpecWM/" target="_blank" rel="noopener">Code</a><a href="#results">Results</a><a href="#theory">Theory</a></nav>
   </header>
   <main>
-    <div class="hero"><h1>World Modeling through<br>Spectral Alignment</h1><p class="subtitle">What information should a latent world model preserve?</p><div class="byline"><div class="authors"><span class="equal-authors">{<span id="equal-author-names"><span>Holger Molin<sup>1,*</sup></span><span>William Peng<sup>1,*</sup></span></span>}</span><span>Marco Bagatella<sup>2</sup></span><span>Randall Balestriero<sup>3</sup></span></div><div class="affiliations"><span><sup>1</sup> Stanford University</span><span><sup>2</sup> ETH Zurich</span><span><sup>3</sup> Brown University</span></div><div class="author-note">* Equal contribution. Order within braces is randomized.</div></div><div class="actions"><a class="button" href="https://anonymous.4open.science/r/SpecWM/" target="_blank" rel="noopener"><span aria-hidden="true">〈/〉</span>Code</a></div></div>
+    <div class="hero"><h1>World Modeling through<br>Spectral Alignment</h1><p class="subtitle">What information should a latent world model preserve?</p><div class="byline"><div class="authors"><span class="equal-authors">{<span id="equal-author-names"><span>Holger Molin<sup>1</sup></span><span>William Peng<sup>1</sup></span></span>}</span><span>Marco Bagatella<sup>2</sup></span><span>Randall Balestriero<sup>3</sup></span></div><div class="affiliations"><span><sup>1</sup> Stanford University</span><span><sup>2</sup> ETH Zurich</span><span><sup>3</sup> Brown University</span></div><div class="author-note">Equal contribution. Order within braces is randomized.</div></div><div class="actions"><a class="button" href="https://anonymous.4open.science/r/SpecWM/" target="_blank" rel="noopener"><span aria-hidden="true">〈/〉</span>Code</a></div></div>
     <figure class="teaser abstract-figure"><a class="figure-link" data-title="Spectral alignment: from pairwise distances to embeddings" data-zoom="assets/abstract_fig.svg?v=2bf3c8bf" href="assets/abstract_fig.pdf?v=2bf3c8bf"><img alt="Pairwise distances define a target similarity matrix. The encoder learns embeddings whose pairwise similarities match the target." height="581" src="assets/abstract_fig.png?v=2bf3c8bf" width="2200"/></a><figcaption>
 <span class="figure-label">Spectral alignment framework.</span> Pairwise distances between samples define a target similarity kernel. We train the encoder to reconstruct this target through embedding similarities.
 </figcaption></figure>
 
-    <div class="metrics" aria-label="CEM planning success: LeWorldModel compared with temporal SpecWM"><a class="figure-link metrics-environments" href="assets/environments.png" data-zoom="assets/environments.png" data-title="The three evaluation environments"><img src="assets/environments.png" width="2500" height="919" alt="OGBench Cube, OGBench Scene, and CALVIN, in the same order as the planning scores below."></a><div class="metric"><div class="value"><span>52%</span><strong>68%</strong></div><p>OGBench Cube</p><small>+16 percentage points</small></div><div class="metric"><div class="value"><span>49%</span><strong>77%</strong></div><p>OGBench Scene</p><small>+28 percentage points</small></div><div class="metric"><div class="value"><span>29%</span><strong>51%</strong></div><p>CALVIN</p><small>+22 percentage points</small></div></div>
+    <div class="metrics" aria-label="CEM planning success: LeWM baseline compared with temporal SpecWM"><a class="figure-link metrics-environments" href="assets/environments.png" data-zoom="assets/environments.png" data-title="The three evaluation environments"><img src="assets/environments.png" width="2500" height="919" alt="OGBench Cube, OGBench Scene, and CALVIN, in the same order as the planning scores below."></a><div class="metric"><div class="value"><span>52%</span><strong>68%</strong></div><p>OGBench Cube</p><small>+16 percentage points over LeWM baseline</small></div><div class="metric"><div class="value"><span>49%</span><strong>77%</strong></div><p>OGBench Scene</p><small>+28 percentage points over LeWM baseline</small></div><div class="metric"><div class="value"><span>29%</span><strong>51%</strong></div><p>CALVIN</p><small>+22 percentage points over LeWM baseline</small></div></div>
     <details class="mobile-nav"><summary>In this article</summary><nav aria-label="Article contents"><a href="#overview">Introduction</a><a href="#method">Spectral alignment</a><a href="#temporal">Temporal kernels</a><a href="#results">Planning</a><a href="#representations">Probing</a><a href="#ablations">Ablations</a><a href="#discussion">Conclusion</a><a href="#theory">Theory</a></nav></details>
     <div class="article-layout">
       <aside class="toc"><div class="toc-title">In this article</div><nav aria-label="Article contents"><a href="#overview">Introduction</a><a href="#method">Spectral alignment</a><a href="#temporal">Temporal kernels</a><a href="#results">Planning</a><a href="#representations">Probing</a><a href="#ablations">Ablations</a><a href="#discussion">Conclusion</a><a href="#theory">Theory</a></nav></aside>
@@ -80,14 +80,14 @@
 <h3>Long-range pairs on CALVIN</h3>
 <p>In CALVIN, blocks move only when manipulated, so their positions often remain constant within a short clip. Within-clip temporal supervision therefore provides little signal to distinguish block positions. We augment each clip with eight observations from the same episode to capture changes over longer periods. These observations contribute only to the spectral loss, using their original time indices, and require no associated actions.</p>
 <aside class="note">
-The extra observations are sampled 300–3,000 raw frames away. We average two centered, trace-normalized Laplacian kernels with bandwidths of 7 and 45 sampled observations. Scene and Cube retain a single-scale kernel.
+The extra observations are sampled 300–3,000 raw frames away. We average two centered, trace-normalized Laplacian kernels with bandwidths of 7 and 45 sampled observations. OGBench Scene and Cube retain a single-scale kernel.
 </aside>
 <h3>A learned distance</h3>
 <p>We also evaluate a quasimetric kernel, which estimates temporal distances between observations according to the optimal goal-reaching policy. While this potentially introduces estimation errors, it labels state pairs by the minimum number of steps between states, instead of expressing the temporal separations observed in the data, and can thus compensate for poor data quality. We symmetrize this distance to match the symmetric Gram matrix of the embeddings.</p>
 </section><section id="results"><span class="section-num">04 / PLANNING</span><h2>Planning with SpecWM</h2>
-<p>Our empirical evaluation revolves around three visual manipulation environments: OGBench Cube and Scene, and CALVIN. Scene and CALVIN introduce multiple objects and articulated fixtures whose states must be represented for control. These environments directly test whether the learned representation preserves information about the surrounding scene as well as the robot itself.</p>
+<p>Our empirical evaluation revolves around three visual manipulation environments: OGBench Cube and OGBench Scene, and CALVIN. OGBench Scene and CALVIN introduce multiple objects and articulated fixtures whose states must be represented for control. These environments directly test whether the learned representation preserves information about the surrounding scene as well as the robot itself.</p>
 <p>With temporal and quasimetric kernels, <strong>SpecWM improves upon LeWM by an average of 21 percentage points in planning success rate</strong>. The planner ranks predicted outcomes by their embedding similarity to the goal, which spectral alignment shapes to reflect temporal or quasimetric proximity.</p>
-<figure><a class="figure-link" data-title="CEM planning success across three environments" data-zoom="assets/fair_cem.svg" href="assets/fair_cem.pdf"><img alt="CEM success: random 13, 21, 17%; LeWM 52, 49, 29%; temporal SpecWM 68, 77, 51%; quasimetric SpecWM 71, 74, 47% on Cube, Scene and CALVIN respectively." height="687" loading="lazy" src="assets/fair_cem.png" width="2200"/></a><figcaption>
+<figure><a class="figure-link" data-title="CEM planning success across three environments" data-zoom="assets/fair_cem.svg" href="assets/fair_cem.pdf"><img alt="CEM success: random 13, 21, 17%; LeWM 52, 49, 29%; temporal SpecWM 68, 77, 51%; quasimetric SpecWM 71, 74, 47% on Cube, OGBench Scene and CALVIN respectively." height="687" loading="lazy" src="assets/fair_cem.png" width="2200"/></a><figcaption>
 <span class="figure-label">Figure 1. Planning success.</span> Average CEM planning success rate on 100 fixed tasks per environment. Bars report the mean over the 20k, 24k, and 28k checkpoints and three seeds, with whiskers showing one cross-seed standard deviation. SpecWM consistently outperforms LeWM.
 </figcaption></figure>
 <aside class="note">
@@ -128,10 +128,10 @@ We generate failure data for each environment and append it to the canonical dat
 <p>Overall, a learned quasimetric kernel is generally on par with a readily available temporal kernel, but either may be preferable depending on the environment.</p>
 </section><section id="representations"><span class="section-num">05 / PROBING</span><h2>What do the representations preserve?</h2>
 <p>To isolate representation quality from prediction accuracy, we evaluate linear probing performance for the position of objects across environments. We consider held-out observations that the encoder was never trained on. For each of five train-evaluation splits, we fit a ridge regressor for each state variable, choose regularization by cross-validation, and report <span class="math-tex">R^2</span> on the evaluation set, averaged over variables and splits.</p>
-<figure><a class="figure-link" data-title="Linear recoverability of manipulated object position" data-zoom="assets/final_probes.svg" href="assets/final_probes.pdf"><img alt="Object-position probe R squared: LeWM versus temporal SpecWM is 0.98 versus 0.81 on Cube, 0.09 versus 0.78 on Scene, and 0.41 versus 0.47 on CALVIN." height="687" loading="lazy" src="assets/final_probes.png" width="2200"/></a><figcaption>
+<figure><a class="figure-link" data-title="Linear recoverability of manipulated object position" data-zoom="assets/final_probes.svg" href="assets/final_probes.pdf"><img alt="Object-position probe R squared: LeWM versus temporal SpecWM is 0.98 versus 0.81 on Cube, 0.09 versus 0.78 on OGBench Scene, and 0.41 versus 0.47 on CALVIN." height="687" loading="lazy" src="assets/final_probes.png" width="2200"/></a><figcaption>
 <span class="figure-label">Figure 2. Object-position probes.</span> Linear probe <span class="math-tex">R^2</span> of the manipulated object’s position from each model’s final-checkpoint embedding. Bars report the mean over three seeds, with whiskers showing one cross-seed standard deviation. Random is an untrained encoder of the same architecture.
 </figcaption></figure>
-<p><strong>SpecWM does not always beat LeWM on probing, and probe quality does not directly correlate with planning performance.</strong> On Cube, LeWM recovers object position more accurately but plans less successfully. On Scene, SpecWM does better at both.</p>
+<p><strong>SpecWM does not always beat LeWM on probing, and probe quality does not directly correlate with planning performance.</strong> On Cube, LeWM recovers object position more accurately but plans less successfully. On OGBench Scene, SpecWM does better at both.</p>
 <h3>Kernel choice</h3>
 <p>We extend the investigation to supervised kernels: state, depth, and proprioception. For each, we use the Euclidean distance between the corresponding feature vectors as the target distance. The state kernel uses the simulator state underlying each observation. Although this information is generally unavailable in real-world settings, it lets us evaluate a target with access to the full physical state.</p>
 <p>The fully specified state kernel achieves the highest average <span class="math-tex">R^2</span> (0.93). Under underspecified supervision, the temporal kernel nearly matches the state kernel (0.84 versus 0.85). <strong>Proprioceptive kernels preserve the robot’s configuration but largely omit object states.</strong></p>
@@ -139,7 +139,7 @@ We generate failure data for each environment and append it to the canonical dat
 <table>
 <thead>
 <tr>
-<th scope="col">Scene probe R²</th>
+<th scope="col">OGBench Scene probe R²</th>
 <th class="highlight" scope="col">Temporal<sup>1</sup></th>
 <th scope="col">State<sup>2</sup></th>
 <th scope="col">Proprio<sup>2</sup></th>
@@ -148,7 +148,7 @@ We generate failure data for each environment and append it to the canonical dat
 </thead>
 <tbody>
 <tr>
-<td>Scene average</td>
+<td>OGBench Scene average</td>
 <td class="highlight">0.84</td>
 <td><strong>0.93</strong></td>
 <td>0.16</td>
@@ -201,27 +201,27 @@ We generate failure data for each environment and append it to the canonical dat
 </figcaption></figure>
 </section><section id="ablations"><span class="section-num">06 / ABLATIONS</span><h2>Additional ablations</h2>
 <details class="ablation" open="open">
-<summary>Failure data</summary>
+<p><summary>Failure data</summary></p>
 <p>Predictors tend to generalize poorly to random actions when trained on expert-only data. We train LeWM and temporal SpecWM on the play data alone, at matched updates, frames per update, and schedule. Failure data raises planning success for both models in every environment, but does not explain the difference between them.</p>
 <figure><a class="figure-link" data-title="Failure-data ablation" data-zoom="assets/data_ablation.svg" href="assets/data_ablation.pdf"><img alt="Failure-data ablation showing planning success and object-position probes with failure rollouts versus play data only on all three environments." height="1514" loading="lazy" src="assets/data_ablation.png" width="2200"/></a><figcaption>
 <span class="figure-label">Figure 4. Effect of the failure data.</span> CEM success (top) and object-position probe <span class="math-tex">R^2</span> (bottom) for LeWM and temporal SpecWM, trained with failure rollouts (solid, three seeds) or on play data alone (hatched, one seed), at matched updates and frames per update. SpecWM outperforms LeWM in both cases.
 </figcaption></figure>
 </details>
 <details class="ablation">
-<summary>Prediction gradients</summary>
+<p><summary>Prediction gradients</summary></p>
 <p>We evaluate a variant of SpecWM which does not backpropagate the predictor regression objective through the target. The prediction loss still updates the encoder through the current observation, but no longer through the next observation used as its target. Planning success generally decreases, while probing results do not follow an obvious trend.</p>
 <figure><a class="figure-link" data-title="Stop-gradient ablation" data-zoom="assets/stopgrad_ablation.svg" href="assets/stopgrad_ablation.pdf"><img alt="Planning and probing comparisons with and without stop-gradient on the prediction target." height="1514" loading="lazy" src="assets/stopgrad_ablation.png" width="2200"/></a><figcaption>
 <span class="figure-label">Figure 5. Effect of a stop-gradient on the prediction target.</span> Bars report the mean over three seeds, with whiskers showing one cross-seed standard deviation. The stop-gradient generally lowers planning success and raises object recoverability in some cases while diminishing recoverability in others.
 </figcaption></figure>
 </details>
 <details class="ablation">
-<summary>Planning cost and normalization</summary>
+<p><summary>Planning cost and normalization</summary></p>
 <p>The two world models have different inherent distance metrics in their latent distributions. We use the one that fits each latent most naturally: L2 for LeWM and cosine similarity for SpecWM. The choice of measure is not the cause of the planning gains. The choice of normalization layer also does not have a substantial impact on planning performance.</p>
 <div class="paired">
-<figure><a class="figure-link" data-title="Planning-cost ablation on Scene" data-zoom="assets/scene_cost_ablation_rounded.svg" href="assets/scene_cost_ablation_rounded.pdf"><img alt="LeWM planning success 50% with L2 and 51% with cosine; temporal SpecWM 77% with either cost." height="2144" loading="lazy" src="assets/scene_cost_ablation_rounded.png" width="2200"/></a><figcaption>
+<figure><a class="figure-link" data-title="Planning-cost ablation on OGBench Scene" data-zoom="assets/scene_cost_ablation_rounded.svg" href="assets/scene_cost_ablation_rounded.pdf"><img alt="LeWM planning success 50% with L2 and 51% with cosine; temporal SpecWM 77% with either cost." height="2144" loading="lazy" src="assets/scene_cost_ablation_rounded.png" width="2200"/></a><figcaption>
 <span class="figure-label">Figure 6. Planning cost.</span> Cosine similarity and L2 distance are evaluated on both LeWM and SpecWM. Three training seeds are evaluated at their respective final three checkpoints for each setting.
 </figcaption></figure>
-<figure><a class="figure-link" data-title="Normalization ablation on Scene" data-zoom="assets/scene_normalization_ablation_rounded.svg" href="assets/scene_normalization_ablation_rounded.pdf"><img alt="LeWM success 53% with BatchNorm and 51% with LayerNorm; temporal SpecWM 77% with either normalization." height="2144" loading="lazy" src="assets/scene_normalization_ablation_rounded.png" width="2200"/></a><figcaption>
+<figure><a class="figure-link" data-title="Normalization ablation on OGBench Scene" data-zoom="assets/scene_normalization_ablation_rounded.svg" href="assets/scene_normalization_ablation_rounded.pdf"><img alt="LeWM success 53% with BatchNorm and 51% with LayerNorm; temporal SpecWM 77% with either normalization." height="2144" loading="lazy" src="assets/scene_normalization_ablation_rounded.png" width="2200"/></a><figcaption>
 <span class="figure-label">Figure 7. Normalization layer.</span> BatchNorm versus LayerNorm in the MLP producing the encoder embedding. One seed is used per run; CEM success is averaged over the final three checkpoints.
 </figcaption></figure>
 </div>
@@ -234,34 +234,34 @@ We generate failure data for each environment and append it to the canonical dat
 </section><section id="theory"><span class="section-num">08 / THEORY</span><h2>Theoretical results</h2>
 <p>We characterize the global optima of the objective, establish conditions for linear recoverability and invariance to nuisance information, and connect temporal-kernel similarity to the behavioral successor measure under an idealized setting. Full proofs are provided in Appendix D of the paper.</p>
 <div class="theory-result" id="spectral-recovery">
-<span class="result-label">Theorem 1</span>
+<p><span class="result-label">Theorem 1</span></p>
 <h3>Spectral recovery</h3>
 <p>Suppose <span class="math-tex">m\le d</span> and <span class="math-tex">K^\alpha_{ii}&gt;0</span> for all <span class="math-tex">i</span>. Then <span class="math-tex">\min_H\mathcal L_{\mathrm{spec}}(H)=0</span>, attained exactly at</p>
 <div class="equation"><span class="math-tex" data-display="true">H^\star=\operatorname{diag}(c)\,H_{\mathrm{spec}}\,Q,\qquad c_i&gt;0,\quad Q^\top Q=I.</span></div>
 <p>Here <span class="math-tex">H_{\mathrm{spec}}</span> is the spectral embedding of <span class="math-tex">K^\alpha</span> with square-root eigenvalue scaling, padded to <span class="math-tex">d</span> dimensions, and <span class="math-tex">Q</span> is orthogonal.</p>
 </div>
 <div class="theory-result" id="linear-recovery">
-<span class="result-label">Theorem 2</span>
+<p><span class="result-label">Theorem 2</span></p>
 <h3>Linear recoverability</h3>
 <p>Let <span class="math-tex">Y\in\mathbb R^{n\times p}</span> satisfy <span class="math-tex">\mathbf1^\top Y=0</span>, row norms <span class="math-tex">\|y_i\|=1</span>, and <span class="math-tex">\operatorname{rank}(Y)\le d</span>. For <span class="math-tex">K=YY^\top</span>, <span class="math-tex">\alpha=1</span>, and all positive spectral directions retained, every global minimizer <span class="math-tex">H^\star</span> subject to <span class="math-tex">\|h_i\|=\sqrt d</span> satisfies</p>
 <div class="equation"><span class="math-tex" data-display="true">\min_{W\in\mathbb R^{d\times p}}\|Y-H^\star W\|_F^2=0.</span></div>
 </div>
 <div class="theory-result" id="nuisance-invariance">
-<span class="result-label">Theorem 3</span>
+<p><span class="result-label">Theorem 3</span></p>
 <h3>Abstraction of task-irrelevant information</h3>
 <p>Write an observation as <span class="math-tex">x=(s,n)</span>, where the target depends on task-relevant state <span class="math-tex">s</span> and is invariant to task-irrelevant <span class="math-tex">n</span>. Assume coverage: nuisance values that are individually possible at two states must also be possible together in a trajectory visiting both states. Under this assumption, fixed-norm encoder outputs, target-diagonal rescaling, a strictly positive target diagonal, and zero expected spectral loss,</p>
 <div class="equation"><span class="math-tex" data-display="true">f_\theta((s_i,n))=f_\theta((s_i,n'))</span></div>
 <p>for almost every clip, every frame <span class="math-tex">i</span>, and almost every pair of independent nuisance draws at <span class="math-tex">s_i</span>. Varying the task-irrelevant component while holding the task-relevant component fixed leaves the representation unchanged.</p>
 </div>
 <div class="theory-result" id="successor-measure">
-<span class="result-label">Theorem 4</span>
+<p><span class="result-label">Theorem 4</span></p>
 <h3>Population target</h3>
 <p>Consider a finite, stationary, irreducible, aperiodic Markov chain under policy <span class="math-tex">\pi_\beta</span>, with stationary distribution <span class="math-tex">\mu</span>. For this result, omit centering, tempering, and truncation. Let <span class="math-tex">\gamma=e^{-1/\sigma}</span> and <span class="math-tex">M^\beta(x,x')=\sum_{t\ge0}\gamma^t\Pr(x_t=x'\mid x_0=x,\pi_\beta)</span> be the behavioral successor measure. For uniformly sampled indices in a length-<span class="math-tex">T</span> trajectory, define <span class="math-tex">R_T(x,x')=\mathbb E[\gamma^{|i-j|}\mid x_i=x,x_j=x']</span>. Then</p>
 <div class="equation"><span class="math-tex" data-display="true">\begin{aligned}T R_T(x,x')\xrightarrow[T\to\infty]{}&amp;\frac{M^\beta(x,x')}{\mu(x')}+\frac{M^\beta(x',x)}{\mu(x)}\\&amp;-\frac{\mathbf1[x=x']}{\mu(x)}.\end{aligned}</span></div>
 <p>For a reversible chain, the two successor terms are equal. This relates the planning score to discounted visitation between predicted states and the goal, in both temporal directions and relative to their stationary frequencies.</p>
 </div>
 <div class="theory-result" id="kernel-dominance">
-<span class="result-label">Theorem 5 · Appendix</span>
+<p><span class="result-label">Theorem 5 · Appendix</span></p>
 <h3>Kernel dominance</h3>
 <p>Take two centered, tempered targets of rank at most <span class="math-tex">d</span> with positive diagonals, and global minimizers with row norm <span class="math-tex">\sqrt d</span>. Define their cosine Gram matrices by <span class="math-tex">K^{\mathrm{cos}}_{ik}=K^\alpha_{ik}/\sqrt{K^\alpha_{ii}K^\alpha_{kk}}</span>. The first kernel gives no greater optimal linear-probe error for every target <span class="math-tex">Y</span> if and only if</p>
 <div class="equation"><span class="math-tex" data-display="true">\operatorname{col}(K_2^{\mathrm{cos}})\subseteq\operatorname{col}(K_1^{\mathrm{cos}}).</span></div>

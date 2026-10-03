@@ -7,10 +7,10 @@ description: What information should a latent world model preserve? SpecWM expli
 subtitle: What information should a latent world model preserve?
 authors:
 - name: Holger Molin
-  affiliation: 1,*
+  affiliation: '1'
   equal: true
 - name: William Peng
-  affiliation: 1,*
+  affiliation: '1'
   equal: true
 - name: Marco Bagatella
   affiliation: '2'
@@ -23,7 +23,7 @@ affiliations:
   name: ETH Zurich
 - marker: '3'
   name: Brown University
-author_note: '* Equal contribution. Order within braces is randomized.'
+author_note: 'Equal contribution. Order within braces is randomized.'
 links:
   code:
     label: Code
@@ -69,15 +69,15 @@ metrics:
 - before: 52%
   after: 68%
   label: OGBench Cube
-  change: +16 percentage points
+  change: +16 percentage points over LeWM baseline
 - before: 49%
   after: 77%
   label: OGBench Scene
-  change: +28 percentage points
+  change: +28 percentage points over LeWM baseline
 - before: 29%
   after: 51%
   label: CALVIN
-  change: +22 percentage points
+  change: +22 percentage points over LeWM baseline
 figures:
   pipeline:
     image: assets/pipeline.png
@@ -92,7 +92,7 @@ figures:
     zoom: assets/fair_cem.svg
     fallback: assets/fair_cem.pdf
     title: CEM planning success across three environments
-    alt: 'CEM success: random 13, 21, 17%; LeWM 52, 49, 29%; temporal SpecWM 68, 77, 51%; quasimetric SpecWM 71, 74, 47% on Cube, Scene and CALVIN respectively.'
+    alt: 'CEM success: random 13, 21, 17%; LeWM 52, 49, 29%; temporal SpecWM 68, 77, 51%; quasimetric SpecWM 71, 74, 47% on Cube, OGBench Scene and CALVIN respectively.'
     width: 2200
     height: 687
     loading: lazy
@@ -101,7 +101,7 @@ figures:
     zoom: assets/final_probes.svg
     fallback: assets/final_probes.pdf
     title: Linear recoverability of manipulated object position
-    alt: 'Object-position probe R squared: LeWM versus temporal SpecWM is 0.98 versus 0.81 on Cube, 0.09 versus 0.78 on Scene, and 0.41 versus 0.47 on CALVIN.'
+    alt: 'Object-position probe R squared: LeWM versus temporal SpecWM is 0.98 versus 0.81 on Cube, 0.09 versus 0.78 on OGBench Scene, and 0.41 versus 0.47 on CALVIN.'
     width: 2200
     height: 687
     loading: lazy
@@ -136,7 +136,7 @@ figures:
     image: assets/scene_cost_ablation_rounded.png
     zoom: assets/scene_cost_ablation_rounded.svg
     fallback: assets/scene_cost_ablation_rounded.pdf
-    title: Planning-cost ablation on Scene
+    title: Planning-cost ablation on OGBench Scene
     alt: LeWM planning success 50% with L2 and 51% with cosine; temporal SpecWM 77% with either cost.
     width: 2200
     height: 2144
@@ -145,7 +145,7 @@ figures:
     image: assets/scene_normalization_ablation_rounded.png
     zoom: assets/scene_normalization_ablation_rounded.svg
     fallback: assets/scene_normalization_ablation_rounded.pdf
-    title: Normalization ablation on Scene
+    title: Normalization ablation on OGBench Scene
     alt: LeWM success 53% with BatchNorm and 51% with LayerNorm; temporal SpecWM 77% with either normalization.
     width: 2200
     height: 2144
@@ -170,7 +170,7 @@ ui:
   resources: Resources
   contents: In this article
   contents_aria: Article contents
-  metrics_aria: 'CEM planning success: LeWorldModel compared with temporal SpecWM'
+  metrics_aria: 'CEM planning success: LeWM baseline compared with temporal SpecWM'
   expanded_figure: Enlarged figure
   figure_close_hint: Press Escape or click to close.
 explorer:
@@ -289,7 +289,7 @@ While supervised kernels can describe relationships between all pairs of inputs,
 In CALVIN, blocks move only when manipulated, so their positions often remain constant within a short clip. Within-clip temporal supervision therefore provides little signal to distinguish block positions. We augment each clip with eight observations from the same episode to capture changes over longer periods. These observations contribute only to the spectral loss, using their original time indices, and require no associated actions.
 
 :::note
-The extra observations are sampled 300–3,000 raw frames away. We average two centered, trace-normalized Laplacian kernels with bandwidths of 7 and 45 sampled observations. Scene and Cube retain a single-scale kernel.
+The extra observations are sampled 300–3,000 raw frames away. We average two centered, trace-normalized Laplacian kernels with bandwidths of 7 and 45 sampled observations. OGBench Scene and Cube retain a single-scale kernel.
 :::
 
 ### A learned distance
@@ -298,7 +298,7 @@ We also evaluate a quasimetric kernel, which estimates temporal distances betwee
 
 ## Planning with SpecWM {#results}
 
-Our empirical evaluation revolves around three visual manipulation environments: OGBench Cube and Scene, and CALVIN. Scene and CALVIN introduce multiple objects and articulated fixtures whose states must be represented for control. These environments directly test whether the learned representation preserves information about the surrounding scene as well as the robot itself.
+Our empirical evaluation revolves around three visual manipulation environments: OGBench Cube and OGBench Scene, and CALVIN. OGBench Scene and CALVIN introduce multiple objects and articulated fixtures whose states must be represented for control. These environments directly test whether the learned representation preserves information about the surrounding scene as well as the robot itself.
 
 With temporal and quasimetric kernels, **SpecWM improves upon LeWM by an average of 21 percentage points in planning success rate**. The planner ranks predicted outcomes by their embedding similarity to the goal, which spectral alignment shapes to reflect temporal or quasimetric proximity.
 
@@ -328,7 +328,7 @@ To isolate representation quality from prediction accuracy, we evaluate linear p
 **Figure 2. Object-position probes.** Linear probe $R^2$ of the manipulated object’s position from each model’s final-checkpoint embedding. Bars report the mean over three seeds, with whiskers showing one cross-seed standard deviation. Random is an untrained encoder of the same architecture.
 :::
 
-**SpecWM does not always beat LeWM on probing, and probe quality does not directly correlate with planning performance.** On Cube, LeWM recovers object position more accurately but plans less successfully. On Scene, SpecWM does better at both.
+**SpecWM does not always beat LeWM on probing, and probe quality does not directly correlate with planning performance.** On Cube, LeWM recovers object position more accurately but plans less successfully. On OGBench Scene, SpecWM does better at both.
 
 ### Kernel choice
 
@@ -337,9 +337,9 @@ We extend the investigation to supervised kernels: state, depth, and propriocept
 The fully specified state kernel achieves the highest average $R^2$ (0.93). Under underspecified supervision, the temporal kernel nearly matches the state kernel (0.84 versus 0.85). **Proprioceptive kernels preserve the robot’s configuration but largely omit object states.**
 
 :::table probes
-| Scene probe R² | Temporal<sup>1</sup> | State<sup>2</sup> | Proprio<sup>2</sup> | Depth<sup>2</sup> |
+| OGBench Scene probe R² | Temporal<sup>1</sup> | State<sup>2</sup> | Proprio<sup>2</sup> | Depth<sup>2</sup> |
 | :--- | ---: | ---: | ---: | ---: |
-| Scene average | 0.84 | **0.93** | 0.16 | 0.50 |
+| OGBench Scene average | 0.84 | **0.93** | 0.16 | 0.50 |
 | Cube | 0.79 | 0.96 | 0.08 | 0.09 |
 | Arm | 0.67 | 0.73 | 0.67 | 0.59 |
 | Drawer | 0.91 | 0.99 | 0.01 | 0.87 |
