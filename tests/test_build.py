@@ -2,6 +2,7 @@ from contextlib import redirect_stdout
 import io
 import json
 from pathlib import Path
+import re
 import sys
 import tempfile
 import unittest
@@ -38,7 +39,7 @@ class MarkdownPublishingTests(unittest.TestCase):
         config['explorer']['wide'] = 'Updated slider explanation.'
         config['ui']['expanded_figure'] = 'Image preview'
         body = body.replace('## What should a world model preserve?', '## Updated introduction')
-        body = body.replace('A world model needs enough information', 'An updated world model needs enough information')
+        body = re.sub(r'(?<=:::lead\n).*?(?=\n:::)', 'An updated introduction from Markdown.', body, count=1, flags=re.S)
         body = body.replace('**Figure 1. Planning success.**', '**Updated planning caption.**')
         body = body.replace('| Scene average | 0.84 | **0.93** |', '| Scene average | 0.84 | **0.94** |')
         body = body.replace(r'K_{ij}=\exp', r'J_{ij}=\exp')
@@ -53,7 +54,7 @@ class MarkdownPublishingTests(unittest.TestCase):
         self.assertEqual(page.select_one('.metric strong').string, '69%')
         self.assertEqual(page.select_one('img[src="assets/pipeline.png"]')['alt'], 'Updated figure description.')
         self.assertEqual(page.select_one('#overview h2').string, 'Updated introduction')
-        self.assertTrue(page.select_one('.lead').get_text().startswith('An updated world model'))
+        self.assertEqual(page.select_one('.lead').get_text(), 'An updated introduction from Markdown.')
         self.assertIn('Updated planning caption.', page.select_one('#results figcaption').get_text())
         self.assertEqual(page.select_one('#representations tbody strong').string, '0.94')
         self.assertTrue(page.select_one('.equation .math-tex').string.startswith(r'J_{ij}=\exp'))

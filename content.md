@@ -3,7 +3,7 @@
 title: |
   World Modeling through
   Spectral Alignment
-description: We train world models to preserve relationships between observations. Read about SpecWM, its spectral alignment objective, and results on three visual manipulation environments.
+description: What information should a latent world model preserve? SpecWM explicitly specifies desired relationships between observations through a teacher similarity kernel.
 subtitle: What information should a latent world model preserve?
 authors:
 - name: Holger Molin
@@ -180,7 +180,7 @@ explorer:
   high: 1 · similar
   label: Kernel bandwidth, σ
   formula: K_{ij}=e^{-|i-j|/\sigma}
-  hint: Try changing σ. The plot shows the raw kernel, before centering and tempering.
+  hint: The bandwidth σ sets the range of distances the target resolves. The plot shows the raw kernel, before centering.
   description: At 7 frames apart, similarity is {similarity}. {band}
   narrow: A narrow band emphasizes nearby observations.
   medium: A wider band preserves similarity across longer separations.
@@ -189,117 +189,125 @@ explorer:
 ---
 
 :::figure abstract_fig
-**World modeling through spectral alignment.** We turn pairwise distances into teacher similarities, then train the encoder’s embedding similarities to match them.
+**Spectral alignment framework.** Pairwise distances (teacher) between samples define a kernel that an encoder (student) is trained to reconstruct through embedding similarities.
 :::
 
 ## What should a world model preserve? {#overview}
 
 :::lead
-A world model needs enough information to predict what happens when an agent acts. It doesn’t need every detail in the image. So what should it keep?
+The goal of a world model is to encode sufficient information to predict the consequences of an agent’s actions. At the same time, complex real-world observations contain large amounts of task-irrelevant information. Learning a compact representation therefore hinges on deciding which aspects of an observation to retain.
 :::
 
-:::note
-A JEPA predicts future embeddings rather than pixels. It can leave out details, but its training objective has to guide which ones.
-:::
+Joint Embedding Predictive Architectures (JEPAs) predict outcomes in a latent space, rather than reconstructing high-dimensional observations in pixel space, allowing learned representations to abstract away details of the input. The training objective must guide which distinctions the model preserves without requiring it to reproduce every detail of an observation.
 
-Recent work has made JEPA training more stable by regularizing the embedding distribution. But avoiding collapse alone doesn’t ensure that the model keeps the information needed for control. An encoder may distinguish robot configurations while ignoring the objects the robot must manipulate.
+Recent work has made substantial progress toward stable JEPA training through regularizing the embedding distribution. However, **avoiding collapse alone does not ensure that a representation preserves information needed for control**. For instance, an encoder may distinguish robot configurations while ignoring the objects the robot must manipulate. We seek a direct method to express these relationships and understand their consequences.
 
-We want a direct way to specify what the encoder should preserve. In **SpecWM**, we define a teacher kernel that says how similar pairs of observations should be, then train the encoder’s embedding similarities to match it. We also train an action-conditioned predictor to output future latents.
+We approach this problem through the lens of **spectral representation learning**, which historically focuses on extracting representations from pairwise relationships between samples. Several contrastive and non-contrastive objectives admit spectral interpretations. Building on this perspective, we make the pairwise notion of similarity between two observations the center of a new training objective for latent dynamics modeling.
 
-The teacher can use physical state, depth, or proprioception. When those aren’t available, the order of observations in a trajectory is enough to provide a training signal. We test how these choices affect what the model represents and how well it plans.
+We introduce a **spectral alignment** framework for training world models to preserve a chosen similarity structure. Using a notion of distances between observations (the *teacher*), we define a target similarity kernel. We then train an encoder (the *student*) to learn embeddings whose pairwise similarities match the target and an action-conditioned predictor to output future latents. We name the resulting world model **SpecWM**.
+
+When some information about the underlying system is known, encoders can be trained based on physical distances, but the natural ordering of states within a trajectory is also sufficient to provide a training signal. Empirically, the choice of kernel strongly controls which physical quantities are recoverable from the representation. Temporal spectral alignment improves planning across OGBench Cube, OGBench Scene, and CALVIN.
 
 ## Spectral alignment {#method}
 
 :::figure pipeline
-**Spectral alignment on a single trajectory.** We train the encoder’s pairwise similarities to match the temporal target. Top: observations from OGBench Scene. Bottom: the target kernel, the encoder’s Gram matrix, the kernel’s spectral embedding, and the encoder outputs. Matching pairwise similarities encourages the encoder to recover the target’s geometry.
+**Spectral alignment on a single trajectory.** Top: sampled observations from OGBench Scene. Bottom: the temporal target kernel and encoder Gram matrix (before centering), the spectral embedding of $K$ (top three eigenvectors), and the encoder rows $h_i$ (top three principal components), colored by frame index. Matching pairwise similarities encourages the encoder to recover the target’s geometry.
 :::
 
-We start with a distance between observations. This might be a physical distance, or just the number of frames between two observations in a trajectory. We turn that distance into a similarity with a Laplacian kernel:
+### Building a target
+
+We start from a distance $d$ between pairs of observations, derived from ground-truth measurements or simply by counting the observations that separate them in the data. For $n$ observations, we adopt a Laplacian kernel to convert distances into similarities:
 
 $$
 K_{ij}=\exp\!\left(-\frac{d(x_i,x_j)}{\sigma}\right).
 $$
 
-:::note
-For a single-scale kernel, we set **σ** to the median distance among the pairs used to build the teacher.
-:::
+Observations that are close according to $d$ remain distinguishable, while pairs more than a few $\sigma$ apart have similarity near zero. The bandwidth $\sigma$ therefore sets the range of distances the target resolves; we set it to the median teacher distance over the pairs the kernel is defined on.
 
-Observations that are close according to this distance get similar embeddings; pairs more than a few σ apart get a target similarity near zero. We then center the kernel so the encoder learns the variation between pairs, rather than their shared positive baseline.
-
-These pairwise similarities also define a set of coordinates for the observations: a *spectral embedding*. For a positive semidefinite kernel $K=U\Lambda U^\top$, we scale each eigenvector by the square root of its eigenvalue:
+Given a teacher kernel specifying the desired inner product between every pair of inputs, we can construct a coordinate vector for each input that realizes these pairwise relationships. Such a construction is called a *spectral embedding*. For a symmetric, positive semidefinite kernel $K=U\Lambda U^\top$, a spectral embedding is
 
 $$
 H_{\mathrm{spec}}=U\Lambda^{1/2},\qquad H_{\mathrm{spec}}H_{\mathrm{spec}}^\top=K.
 $$
 
-Each row gives one observation’s coordinates. Their inner products reproduce the teacher similarities.
+Each row provides the coordinates of one sample. Each eigenvalue determines the relative contribution of its corresponding eigenvector to the kernel, making eigenvalue rescaling a natural reweighting operation.
 
-A few large eigenvalues could still dominate the loss, letting the encoder ignore the other directions. To reduce this imbalance, we take the square root of the retained eigenvalues (α = ½). We keep up to 128 positive directions.
+Without centering, the kernel would be dominated by a positive baseline, and regressing this target would favor matching that shared baseline rather than the variation around it. Still, if a few eigenvalues dominate, the encoder can achieve a small squared error by matching those directions while largely ignoring the others. We therefore *temper* the kernel by reshaping its spectrum before it is used as a target.
 
 :::steps
 ### 1. Center
 
-Remove row and column means, then restore the grand mean. This removes the shared positive baseline.
+Remove row and column means, then restore the grand mean, to form the centered kernel $\widetilde K$.
 
 ### 2. Temper
 
-Raise retained positive eigenvalues to α = ½, keeping up to 128 directions.
+Raise the leading positive eigenvalues to $\alpha=1/2$ and truncate the spectrum at $m=128$. Normalize the target to have trace $n$.
 
 ### 3. Align
 
-Rescale embedding norms to match the target diagonal, then match the centered matrix of inner products to the target.
+Rescale each embedding to the length the target prescribes, then regress the centered matrix of embedding inner products onto the target.
 :::
 
-$$
-\mathcal L_{\mathrm{spec}}=\|\widetilde S-K^\alpha\|_F^2.
-$$
-
-Here $\widetilde S$ is the centered Gram matrix of the rescaled embeddings:
+With $\widetilde K=U\Lambda U^\top$, the tempered target is $K^\alpha=nU\Lambda^\alpha U^\top/\operatorname{tr}(\Lambda^\alpha)$. The encoder $f_\theta$ maps each observation $x_i$ to an embedding $h_i\in\mathbb R^d$. We rescale these outputs and compute their Gram matrix:
 
 $$
 \bar h_i=\sqrt{K^\alpha_{ii}}\frac{h_i}{\|h_i\|},\qquad S=\bar H\bar H^\top.
 $$
 
-This is the connection to spectral embeddings: in the fully specified setting, zero spectral loss makes the rescaled encoder outputs recover the spectral embedding of $K^\alpha$, up to a rotation or reflection. This assumes enough embedding dimensions and a positive target diagonal; [Theorem 1](#spectral-recovery) gives the precise statement. We can therefore inspect a teacher’s ideal representation through eigendecomposition, without training a model.
+We double center $S$ and regress the target through a spectral loss:
 
-The encoder alone isn’t enough for planning. We also train a predictor to output the embedding of the next observation given the current one and an action. We maximize its cosine similarity with the target, letting gradients flow through both. RMS normalization fixes the scale of the embeddings used by the predictor and planner.
+$$
+\mathcal L_{\mathrm{spec}}=\|\widetilde S-K^\alpha\|_F^2.
+$$
+
+In the fully specified setting, an embedding table that minimizes this loss recovers the row-normalized spectral embeddings of $K^\alpha$, up to an orthogonal transformation. [Theorem 1](#spectral-recovery) gives the conditions. We can thus evaluate the probing qualities of spectral embeddings derived from arbitrary kernels without ever having to train a model.
+
+### Prediction and planning
+
+While the spectral loss is sufficient for training an encoder, planning in latent space requires learning a predictor. We train it by a simple regression objective in latent space, which is also backpropagated through the encoder:
 
 $$
 \mathcal L=\mathcal L_{\mathrm{spec}}-\lambda\sum_i\cos(g_\phi(f_\theta(x_i),a_i),f_\theta(x_i^{\prime})).
 $$
 
-For planning, we use the Cross-Entropy Method (CEM). We sample action sequences, predict where they lead, and score those outcomes by their similarity to the goal embedding. We refit the sampling distribution on the best candidates, execute part of the selected sequence, then replan.
+The predictor $g_\phi$ takes the current embedding and an action, and predicts the embedding of the next observation. For stability, we apply a parameter-free RMS normalization to the encoder output, so that every embedding has norm $\sqrt d$. This fixes the scale of the embeddings seen by the predictor and the planner.
+
+We use the Cross-Entropy Method (CEM) to optimize action sequences. Candidate sequences are sampled from a Gaussian distribution, and the world model predicts the representation of observations $T$ steps ahead for each. Candidates are then scored according to similarity to the embedding of a goal observation. The action distribution is refit on the best candidates. We then execute a prefix of the selected sequence before replanning from the new observation.
 
 ## Learning from temporal distance {#temporal}
 
-Without state labels or other metadata, we can use time. For two observations in the same trajectory, we set the teacher distance to the number of indices between them: $d(x_i,x_j)=|i-j|$.
-
-This requires only the order of observations. Nearby frames get higher target similarity, and frames farther apart get lower similarity.
+When metadata is not available, the ordering of observations in trajectories itself can form an *unsupervised* kernel. We use a temporal kernel, which relies on the absolute difference between indices for observations ordered in a trajectory: $d(x_i,x_j)=|i-j|$. Its only source of supervision is the order of observations in a trajectory.
 
 :::explorer
 
 :::
 
+While supervised kernels can describe relationships between all pairs of inputs, the unsupervised kernels we use only express relationships for pairs of inputs in the same trajectory. In this *underspecified* setting, cross-trajectory similarities are excluded from the training objective. We omit tempering and target-diagonal rescaling; each clip’s squared error is normalized by the mean squared magnitude of its centered target before averaging across clips.
+
 ### Long-range pairs on CALVIN
 
-In CALVIN, blocks move only when manipulated. They often stay still throughout a short clip, so the temporal kernel gets little signal about their positions. We add eight observations from farther away in the same episode and average two kernels with different bandwidths. These extra observations contribute only to the spectral loss and need no associated actions.
+In CALVIN, blocks move only when manipulated, so their positions often remain constant within a short clip. Within-clip temporal supervision therefore provides little signal to distinguish block positions. We augment each clip with eight observations from the same episode to capture changes over longer periods. These observations contribute only to the spectral loss, using their original time indices, and require no associated actions.
 
 :::note
-CALVIN uses bandwidths of 7 and 45 sampled observations. The extra frames come from 300–3,000 raw frames away. See Appendix C.2.
+The extra observations are sampled 300–3,000 raw frames away. We average two centered, trace-normalized Laplacian kernels with bandwidths of 7 and 45 sampled observations. Scene and Cube retain a single-scale kernel.
 :::
 
-We also try a quasimetric kernel. Its learned distance estimates the minimum number of steps needed to get between states, rather than the separation we happened to observe in a trajectory. This gives us another teacher to compare, though learning the distance can introduce errors.
+### A learned distance
+
+We also evaluate a quasimetric kernel, which estimates temporal distances between observations according to the optimal goal-reaching policy. While this potentially introduces estimation errors, it labels state pairs by the minimum number of steps between states, instead of expressing the temporal separations observed in the data, and can thus compensate for poor data quality. We symmetrize this distance to match the student’s symmetric Gram matrix.
 
 ## Planning with SpecWM {#results}
 
-SpecWM improves planning success over LeWorldModel with both temporal and quasimetric kernels, by an average of 21 percentage points. The planner scores predicted outcomes by their similarity to the goal. Our objective trains that similarity to reflect temporal or quasimetric proximity.
+Our empirical evaluation revolves around three visual manipulation environments: OGBench Cube and Scene, and CALVIN. Scene and CALVIN introduce multiple objects and articulated fixtures whose states must be represented for control. These environments directly test whether the learned representation preserves information about the surrounding scene as well as the robot itself.
+
+With temporal and quasimetric kernels, **SpecWM improves upon LeWM by an average of 21 percentage points in planning success rate**. The planner ranks predicted outcomes by their embedding similarity to the goal, which spectral alignment shapes to reflect temporal or quasimetric proximity.
 
 :::figure fair_cem
-**Figure 1. Planning success.** We evaluate 100 fixed tasks per environment and average the 20k, 24k, and 28k checkpoints over three seeds. Error bars show one standard deviation across seeds.
+**Figure 1. Planning success.** Average CEM planning success rate on 100 fixed tasks per environment. Bars report the mean over the 20k, 24k, and 28k checkpoints and three seeds, with whiskers showing one cross-seed standard deviation. SpecWM consistently outperforms LeWM.
 :::
 
 :::note
-We add failure trajectories to the training data for both models. Below, we check how much these extra trajectories help.
+We generate failure data for each environment and append it to the canonical datasets for both models. We ablate this decision below.
 :::
 
 :::table planning
@@ -310,21 +318,23 @@ We add failure trajectories to the training data for both models. Below, we chec
 | CALVIN | 29 | 51 | 47 |
 :::
 
-The learned quasimetric kernel performs about as well as the temporal kernel overall. Which one works better depends on the environment.
+Overall, a learned quasimetric kernel is generally on par with a readily available temporal kernel, but either may be preferable depending on the environment.
 
 ## What do the representations preserve? {#representations}
 
-To check what the embeddings contain, we fit linear probes to predict object positions. We use observations the encoder never saw during training, fitting ridge regressors and selecting their regularization by cross-validation.
+To isolate representation quality from prediction accuracy, we evaluate linear probing performance for the position of objects across environments. We consider held-out observations that the encoder was never trained on. For each of five train-evaluation splits, we fit a ridge regressor for each state variable, choose regularization by cross-validation, and report $R^2$ on the evaluation set, averaged over variables and splits.
 
 :::figure final_probes
-**Figure 2. Object-position probes.** We fit ridge regressors to recover the manipulated object’s position from final-checkpoint embeddings, splitting held-out episodes into probe training and test sets. Bars average three seeds; error bars show one standard deviation across seeds.
+**Figure 2. Object-position probes.** Linear probe $R^2$ of the manipulated object’s position from each model’s final-checkpoint embedding. Bars report the mean over three seeds, with whiskers showing one cross-seed standard deviation. Random is an untrained encoder of the same architecture.
 :::
 
-**Better probing doesn’t always mean better planning.** On Cube, LeWM recovers object position more accurately than temporal SpecWM, but plans less successfully. On Scene, SpecWM does better at both.
+**SpecWM does not always beat LeWM on probing, and probe quality does not directly correlate with planning performance.** On Cube, LeWM recovers object position more accurately but plans less successfully. On Scene, SpecWM does better at both.
 
 ### Kernel choice
 
-We also compare state, depth, and proprioceptive teachers. With relationships specified across states, the state kernel gives the highest average R² on Scene (0.93). The temporal kernel, which only provides relationships within trajectories, reaches 0.84. Proprioceptive kernels preserve the robot’s configuration but largely omit object states.
+We extend the investigation to supervised kernels: state, depth, and proprioception. For each, we use the Euclidean distance between the corresponding feature vectors as the teacher distance. The state kernel uses the simulator state underlying each observation. Although this information is generally unavailable in real-world settings, it lets us evaluate a teacher with access to the full physical state.
+
+The fully specified state kernel achieves the highest average $R^2$ (0.93). Under underspecified supervision, the temporal kernel nearly matches the state kernel (0.84 versus 0.85). **Proprioceptive kernels preserve the robot’s configuration but largely omit object states.**
 
 :::table probes
 | Scene probe R² | Temporal<sup>1</sup> | State<sup>2</sup> | Proprio<sup>2</sup> | Depth<sup>2</sup> |
@@ -338,52 +348,52 @@ We also compare state, depth, and proprioceptive teachers. With relationships sp
 :::
 
 :::table-caption
-Selected columns from the paper’s Table 1, a separate kernel ablation from the probe comparison above. <sup>1</sup>Relationships within trajectories only. <sup>2</sup>Relationships specified across states.
+Selected columns from the paper’s Table 1: linear probe $R^2$ on held-out OGBench Scene episodes. <sup>1</sup>Relationships within trajectories only. <sup>2</sup>Relationships specified across states.
 :::
 
+For the fully specified kernels, kernel eigenvectors are strongly recoverable from the learned embeddings. Recovery is strongest for the leading eigenvectors and decreases for those associated with smaller eigenvalues.
+
 :::figure spectral_conversion
-**Figure 3. Recovering the teacher’s spectral directions.** Eigenvector probes compare fully specified and underspecified supervision against an untrained encoder.
+**Figure 3. Spectral recovery.** Linear probe $R^2$ between kernel eigenvectors and embeddings from encoders trained on fully specified state, proprioception, and depth. Underspecified variants and an untrained encoder are included for comparison.
 :::
 
 ## Additional ablations {#ablations}
 
-We check the effects of failure data, prediction gradients, planning cost, and normalization.
-
-:::details open | Failure data helps both methods.
-When trained only on expert data, predictors tend to generalize poorly to random actions. Adding failure trajectories improves planning for both models in every environment. SpecWM still outperforms LeWM without them, so the extra data doesn’t explain the gap.
+:::details open | Failure data
+Predictors tend to generalize poorly to random actions when trained on expert-only data. We train LeWM and temporal SpecWM on the play data alone, at matched updates, frames per update, and schedule. Failure data raises planning success for both models in every environment, but does not explain the difference between them.
 
 :::figure data_ablation
-**Figure 4. Data coverage.** Solid bars include failure rollouts and average three seeds; hatched bars use play data only and one seed, with matched updates and frames per update.
+**Figure 4. Effect of the failure data.** CEM success (top) and object-position probe $R^2$ (bottom) for LeWM and temporal SpecWM, trained with failure rollouts (solid, three seeds) or on play data alone (hatched, one seed), at matched updates and frames per update. SpecWM outperforms LeWM in both cases.
 :::
 :::
 
-:::details | Gradients through the prediction target matter.
-What happens if we stop gradients through the next-state target? The prediction loss still updates the encoder through the current observation, but planning success generally falls. The probe results change in both directions.
+:::details | Prediction gradients
+We evaluate a variant of SpecWM which does not backpropagate the predictor regression objective through the target. The prediction loss still updates the encoder through the current observation, but no longer through the next observation used as its target. Planning success generally decreases, while probing results do not follow an obvious trend.
 
 :::figure stopgrad_ablation
-**Figure 5. Prediction target gradients.** Means over three seeds; whiskers show one cross-seed standard deviation.
+**Figure 5. Effect of a stop-gradient on the prediction target.** Bars report the mean over three seeds, with whiskers showing one cross-seed standard deviation. The stop-gradient generally lowers planning success and raises object recoverability in some cases while diminishing recoverability in others.
 :::
 :::
 
-:::details | The cost function and normalization do not explain the gap.
-Our main experiments use L2 distance for LeWM and cosine similarity for SpecWM. Swapping the planning cost doesn’t explain the gains. We also try both BatchNorm and LayerNorm in the projection head; this makes little difference in the reported ablation.
+:::details | Planning cost and normalization
+The two world models have different inherent distance metrics in their latent distributions. We use the one that fits each latent most naturally: L2 for LeWM and cosine similarity for SpecWM. The choice of measure is not the cause of the planning gains. The choice of normalization layer also does not have a substantial impact on planning performance.
 
 :::paired
 :::figure scene_cost_ablation_rounded
-**Figure 6. Planning cost.** Three seeds, averaged over their final three checkpoints.
+**Figure 6. Planning cost.** Cosine similarity and L2 distance are evaluated on both LeWM and SpecWM. Three training seeds are evaluated at their respective final three checkpoints for each setting.
 :::
 
 :::figure scene_normalization_ablation_rounded
-**Figure 7. Normalization.** One seed per run, averaged over the final three checkpoints.
+**Figure 7. Normalization layer.** BatchNorm versus LayerNorm in the MLP producing the encoder embedding. One seed is used per run; CEM success is averaged over the final three checkpoints.
 :::
 :::
 :::
 
 ## Conclusion {#discussion}
 
-Spectral alignment lets us specify which pairwise relationships a world model should preserve. The teacher changes what the representation keeps. Even a teacher that uses only trajectory ordering improves planning across all three environments.
+The core idea is to directly specify the pairwise relationships that representations should preserve through a teacher kernel. We find that readily available kernels result in strong planning performance, which is not entirely correlated with probing accuracy.
 
-We still don’t fully understand why some kernels give better planning without better probe scores. We’d like to understand that connection and test which kernels work best at larger scales. Language-based semantic distances are another teacher we’d like to explore.
+Pursuing a better understanding of the mechanisms enabling effective planning would be valuable. We view the study of which kernels are most conducive to large-scale self-supervised training as the next primary direction of work. Kernels involving language for semantic distances are another future direction.
 
 :::actions code
 
@@ -391,24 +401,24 @@ We still don’t fully understand why some kernels give better planning without 
 
 ## Theoretical results {#theory}
 
-Here are the main results. We leave the proofs to Section 5 and Appendix D of the paper.
+We characterize the global optima of the objective, establish conditions for linear recoverability and invariance to nuisance information, and connect temporal-kernel similarity to the behavioral successor measure under an idealized setting. Full proofs are provided in Appendix D of the paper.
 
 :::theorem spectral-recovery | Theorem 1
-### The spectral loss has a known optimum
+### Spectral recovery
 
-Let $H_{\mathrm{spec}}$ be the spectral embedding of the centered, tempered target $K^\alpha$, padded to $d$ dimensions. If its rank is at most $d$ and its diagonal is strictly positive, the minimum spectral loss is zero, attained exactly at
+Suppose $m\le d$ and $K^\alpha_{ii}>0$ for all $i$. Then $\min_H\mathcal L_{\mathrm{spec}}(H)=0$, attained exactly at
 
 $$
 H^\star=\operatorname{diag}(c)\,H_{\mathrm{spec}}\,Q,\qquad c_i>0,\quad Q^\top Q=I.
 $$
 
-The objective recovers the teacher’s spectral embedding up to positive row scales and an orthogonal transform.
+Here $H_{\mathrm{spec}}$ is the spectral embedding of $K^\alpha$ with square-root eigenvalue scaling, padded to $d$ dimensions, and $Q$ is orthogonal.
 :::
 
 :::theorem linear-recovery | Theorem 2
-### Labels can be recovered from their relationships
+### Linear recoverability
 
-Let $Y\in\mathbb R^{n\times p}$ have centered, unit-norm rows and rank at most $d$. With $K=YY^\top$, $\alpha=1$, and all positive directions retained, every global minimizer with row norm $\sqrt d$ allows exact linear recovery:
+Let $Y\in\mathbb R^{n\times p}$ satisfy $\mathbf1^\top Y=0$, row norms $\|y_i\|=1$, and $\operatorname{rank}(Y)\le d$. For $K=YY^\top$, $\alpha=1$, and all positive spectral directions retained, every global minimizer $H^\star$ subject to $\|h_i\|=\sqrt d$ satisfies
 
 $$
 \min_{W\in\mathbb R^{d\times p}}\|Y-H^\star W\|_F^2=0.
@@ -416,31 +426,31 @@ $$
 :::
 
 :::theorem nuisance-invariance | Theorem 3
-### Matching the teacher can remove nuisance information
+### Abstraction of task-irrelevant information
 
-Write an observation as $x=(s,n)$, where the teacher depends on state $s$ but not nuisance $n$. Assume coverage: nuisance pairs possible under independent draws at two states are also possible together within a trajectory visiting those states. With fixed-norm outputs, target-diagonal rescaling, a strictly positive target diagonal, and zero expected spectral loss,
+Write an observation as $x=(s,n)$, where the teacher depends on task-relevant state $s$ and is invariant to task-irrelevant $n$. Assume coverage: nuisance values that are individually possible at two states must also be possible together in a trajectory visiting both states. Under this assumption, fixed-norm encoder outputs, target-diagonal rescaling, a strictly positive target diagonal, and zero expected spectral loss,
 
 $$
 f_\theta((s_i,n))=f_\theta((s_i,n'))
 $$
 
-for almost every clip, every frame $i$, and almost every pair of independent nuisance draws at $s_i$.
+for almost every clip, every frame $i$, and almost every pair of independent nuisance draws at $s_i$. Varying the task-irrelevant component while holding the task-relevant component fixed leaves the representation unchanged.
 :::
 
 :::theorem successor-measure | Theorem 4
-### The temporal target contains the successor measure
+### Population target
 
-Consider a finite, stationary, irreducible, aperiodic Markov chain under policy $\pi_\beta$, with stationary distribution $\mu$. For this result, omit centering, tempering, and truncation. Let $\gamma=e^{-1/\sigma}$ and $M^\beta(x,x')=\sum_{t\ge0}\gamma^t\Pr(x_t=x'\mid x_0=x,\pi_\beta)$ be the discounted successor measure. For uniformly sampled indices in a length-$T$ trajectory, define $R_T(x,x')=\mathbb E[\gamma^{|i-j|}\mid x_i=x,x_j=x']$. Then
+Consider a finite, stationary, irreducible, aperiodic Markov chain under policy $\pi_\beta$, with stationary distribution $\mu$. For this result, omit centering, tempering, and truncation. Let $\gamma=e^{-1/\sigma}$ and $M^\beta(x,x')=\sum_{t\ge0}\gamma^t\Pr(x_t=x'\mid x_0=x,\pi_\beta)$ be the behavioral successor measure. For uniformly sampled indices in a length-$T$ trajectory, define $R_T(x,x')=\mathbb E[\gamma^{|i-j|}\mid x_i=x,x_j=x']$. Then
 
 $$
 \begin{aligned}T R_T(x,x')\xrightarrow[T\to\infty]{}&\frac{M^\beta(x,x')}{\mu(x')}+\frac{M^\beta(x',x)}{\mu(x)}\\&-\frac{\mathbf1[x=x']}{\mu(x)}.\end{aligned}
 $$
 
-For a reversible chain, the two successor terms are equal.
+For a reversible chain, the two successor terms are equal. This relates the planning score to discounted visitation between predicted states and the goal, in both temporal directions and relative to their stationary frequencies.
 :::
 
 :::theorem kernel-dominance | Theorem 5 · Appendix
-### When is one kernel better for every linear probe?
+### Kernel dominance
 
 Take two centered, tempered targets of rank at most $d$ with positive diagonals, and global minimizers with row norm $\sqrt d$. Define their cosine Gram matrices by $K^{\mathrm{cos}}_{ik}=K^\alpha_{ik}/\sqrt{K^\alpha_{ii}K^\alpha_{kk}}$. The first kernel gives no greater optimal linear-probe error for every target $Y$ if and only if
 
@@ -448,5 +458,5 @@ $$
 \operatorname{col}(K_2^{\mathrm{cos}})\subseteq\operatorname{col}(K_1^{\mathrm{cos}}).
 $$
 
-Dominance is strict if and only if the inclusion is strict.
+Dominance is strict if and only if this inclusion is strict.
 :::
