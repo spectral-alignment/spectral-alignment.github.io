@@ -39,9 +39,9 @@
 <p class="lead">The goal of a world model is to encode sufficient information to predict the consequences of an agent’s actions. At the same time, complex real-world observations contain large amounts of task-irrelevant information. Learning a compact representation therefore hinges on deciding which aspects of an observation to retain.</p>
 
 <p>Joint Embedding Predictive Architectures (JEPAs) predict outcomes in a latent space, rather than reconstructing high-dimensional observations in pixel space, allowing learned representations to abstract away details of the input. The training objective must guide which distinctions the model preserves without requiring it to reproduce every detail of an observation.</p>
-<p>Recent work has made substantial progress toward stable JEPA training through regularizing the embedding distribution. However, <strong>avoiding collapse alone does not ensure that a representation preserves information needed for control</strong>. For instance, an encoder may distinguish robot configurations while ignoring the objects the robot must manipulate. We seek a direct method to express these relationships and understand their consequences.</p>
-<p>We approach this problem through the lens of <strong>spectral representation learning</strong>, which historically focuses on extracting representations from pairwise relationships between samples. Several contrastive and non-contrastive objectives admit spectral interpretations. Building on this perspective, we make the pairwise notion of similarity between two observations the center of a new training objective for latent dynamics modeling.</p>
-<p>We introduce a <strong>spectral alignment</strong> framework for training world models to preserve a chosen similarity structure. Using a notion of distances between observations, we define a target similarity kernel. We then train an encoder to learn embeddings whose pairwise similarities match the target and an action-conditioned predictor to output future latents. We name the resulting world model <strong>SpecWM</strong>.</p>
+<p>Recent work has made substantial progress toward stable JEPA training through regularizing the embedding distribution. However, avoiding collapse alone does not ensure that a representation preserves information needed for control. For instance, an encoder may distinguish robot configurations while ignoring the objects the robot must manipulate. We seek a direct method to express these relationships and understand their consequences.</p>
+<p>We approach this problem through the lens of spectral representation learning, which historically focuses on extracting representations from pairwise relationships between samples. Several contrastive and non-contrastive objectives admit spectral interpretations. Building on this perspective, we make the pairwise notion of similarity between two observations the center of a new training objective for latent dynamics modeling.</p>
+<p>We introduce a <strong>spectral alignment</strong> framework for training world models to preserve a chosen similarity structure. Using a notion of distances between observations, we define a target similarity kernel. We then train an encoder to learn embeddings whose pairwise similarities match the target and an action-conditioned predictor to output future latents. We name the resulting world model SpecWM.</p>
 <p>When some information about the underlying system is known, encoders can be trained based on physical distances, but the natural ordering of states within a trajectory is also sufficient to provide a training signal. Empirically, the choice of kernel strongly controls which physical quantities are recoverable from the representation. Temporal spectral alignment improves planning across OGBench Cube, OGBench Scene, and CALVIN.</p>
 </section><section id="method"><span class="section-num">02 / METHOD</span><h2>Spectral alignment</h2>
 <figure><a class="figure-link" data-title="Spectral alignment on a single trajectory" data-zoom="assets/pipeline.svg" href="assets/pipeline.pdf"><img alt="Eight robot observations along a trajectory, followed by the temporal target kernel, learned encoder Gram matrix, and their corresponding embedding geometries." height="943" src="assets/pipeline.png" width="2200"/></a><figcaption>
@@ -202,21 +202,21 @@ We generate failure data for each environment and append it to the canonical dat
 <p>The state kernel’s lower recovery scores at later indices largely reflect its less even spectrum: most of its energy is concentrated in the leading directions. Weighting each eigenvector’s probe <span class="math-tex">R^2</span> by its normalized eigenvalue gives mean scores of <strong>0.965 for state, 0.987 for proprioception, and 0.992 for depth</strong>. The models therefore recover the directions carrying most of the kernel’s energy particularly well.</p>
 </section><section id="ablations"><span class="section-num">06 / ABLATIONS</span><h2>Additional ablations</h2>
 <details class="ablation" open="open">
-<p><summary>Failure data</summary></p>
+<summary>Failure data</summary>
 <p>Predictors tend to generalize poorly to random actions when trained on expert-only data. We train LeWM and temporal SpecWM on the play data alone, at matched updates, frames per update, and schedule. Failure data raises planning success for both models in every environment, but does not explain the difference between them.</p>
 <figure><a class="figure-link" data-title="Failure-data ablation" data-zoom="assets/data_ablation.svg" href="assets/data_ablation.pdf"><img alt="Failure-data ablation showing planning success and object-position probes with failure rollouts versus play data only on all three environments." height="1514" loading="lazy" src="assets/data_ablation.png" width="2200"/></a><figcaption>
 <span class="figure-label">Figure 4. Effect of the failure data.</span> CEM success (top) and object-position probe <span class="math-tex">R^2</span> (bottom) for LeWM and temporal SpecWM, trained with failure rollouts (solid, three seeds) or on play data alone (hatched, one seed), at matched updates and frames per update. SpecWM outperforms LeWM in both cases.
 </figcaption></figure>
 </details>
 <details class="ablation">
-<p><summary>Prediction gradients</summary></p>
+<summary>Prediction gradients</summary>
 <p>We evaluate a variant of SpecWM which does not backpropagate the predictor regression objective through the target. The prediction loss still updates the encoder through the current observation, but no longer through the next observation used as its target. Planning success generally decreases, while probing results do not follow an obvious trend.</p>
 <figure><a class="figure-link" data-title="Stop-gradient ablation" data-zoom="assets/stopgrad_ablation.svg" href="assets/stopgrad_ablation.pdf"><img alt="Planning and probing comparisons with and without stop-gradient on the prediction target." height="1514" loading="lazy" src="assets/stopgrad_ablation.png" width="2200"/></a><figcaption>
 <span class="figure-label">Figure 5. Effect of a stop-gradient on the prediction target.</span> Bars report the mean over three seeds, with whiskers showing one cross-seed standard deviation. The stop-gradient generally lowers planning success and raises object recoverability in some cases while diminishing recoverability in others.
 </figcaption></figure>
 </details>
 <details class="ablation">
-<p><summary>Planning cost and normalization</summary></p>
+<summary>Planning cost and normalization</summary>
 <p>The two world models have different inherent distance metrics in their latent distributions. We use the one that fits each latent most naturally: L2 for LeWM and cosine similarity for SpecWM. The choice of measure is not the cause of the planning gains. The choice of normalization layer also does not have a substantial impact on planning performance.</p>
 <div class="paired">
 <figure><a class="figure-link" data-title="Planning-cost ablation on OGBench Scene" data-zoom="assets/scene_cost_ablation_rounded.svg" href="assets/scene_cost_ablation_rounded.pdf"><img alt="LeWM planning success 50% with L2 and 51% with cosine; temporal SpecWM 77% with either cost." height="2144" loading="lazy" src="assets/scene_cost_ablation_rounded.png" width="2200"/></a><figcaption>
@@ -237,7 +237,7 @@ We generate failure data for each environment and append it to the canonical dat
 <h3>The spectral loss has a known optimum</h3>
 <p>In the fully specified setting, the teacher defines relationships between every pair of inputs. Its centered, tempered target <span class="math-tex">K^\alpha</span> can be decomposed into eigenvectors and eigenvalues. A spectral embedding uses the retained eigenvectors as coordinates, scaled by the square roots of the target’s eigenvalues. When the embedding dimension is large enough, these coordinates reproduce the target’s pairwise inner products exactly.</p>
 <div class="theory-result" id="spectral-recovery">
-<p><span class="result-label">Theorem 1</span></p>
+<span class="result-label">Theorem 1</span>
 <h3>Spectral recovery</h3>
 <p>Suppose <span class="math-tex">m\le d</span> and <span class="math-tex">K^\alpha_{ii}&gt;0</span> for every input <span class="math-tex">i</span>. Then the minimum spectral loss is zero, attained exactly at</p>
 <div class="equation"><span class="math-tex" data-display="true">H^\star=\operatorname{diag}(c)\,H_{\mathrm{spec}}\,Q,\qquad c_i&gt;0,\quad Q^\top Q=I_d.</span></div>
@@ -248,7 +248,7 @@ We generate failure data for each environment and append it to the canonical dat
 <h3>Downstream probing guarantees</h3>
 <p>A linear probe can recover a quantity exactly when its values lie in the representation’s column space. The spectral characterization therefore connects kernel choice to the information accessible downstream. In particular, a kernel built from label relationships can make the labels themselves linearly recoverable, even though the encoder never directly regresses onto those labels.</p>
 <div class="theory-result" id="linear-recovery">
-<p><span class="result-label">Theorem 2</span></p>
+<span class="result-label">Theorem 2</span>
 <h3>Linear recoverability</h3>
 <p>Let <span class="math-tex">Y\in\mathbb R^{n\times p}</span> be centered, with <span class="math-tex">\mathbf1^\top Y=0</span>, unit row norms <span class="math-tex">\|y_i\|=1</span>, and <span class="math-tex">\operatorname{rank}(Y)\le d</span>. Set <span class="math-tex">K=YY^\top</span>, use <span class="math-tex">\alpha=1</span>, and retain all positive spectral directions. Every global minimizer <span class="math-tex">H^\star</span> of the spectral loss subject to <span class="math-tex">\|h_i\|=\sqrt d</span> satisfies</p>
 <div class="equation"><span class="math-tex" data-display="true">\min_{W\in\mathbb R^{d\times p}}\|Y-H^\star W\|_F^2=0.</span></div>
@@ -266,7 +266,7 @@ Conditioning on a trajectory may change the likelihood of nuisance pairs, but ca
 </aside>
 <p>Coverage includes independent sensor noise and correlated disturbances when all otherwise possible combinations remain possible. It excludes a background identity or lighting condition that varies across trajectories but stays fixed within each one. Such a shared attribute could select a rotation for every embedding in a clip without changing their pairwise similarities.</p>
 <div class="theory-result" id="nuisance-invariance">
-<p><span class="result-label">Theorem 3</span></p>
+<span class="result-label">Theorem 3</span>
 <h3>Abstraction of task-irrelevant information</h3>
 <p>Assume coverage, fixed-norm encoder outputs, and target-diagonal rescaling. If each trajectory’s centered, tempered target <span class="math-tex">K^\alpha</span> has strictly positive diagonal entries almost surely and <span class="math-tex">\mathbb E[\mathcal L_{\mathrm{spec}}]=0</span>, then</p>
 <div class="equation"><span class="math-tex" data-display="true">f_\theta((s_i,n))=f_\theta((s_i,n'))</span></div>
@@ -283,7 +283,7 @@ Conditioning on a trajectory may change the likelihood of nuisance pairs, but ca
 <div class="equation"><span class="math-tex" data-display="true">R_T(x,x')=\mathbb E\left[\gamma^{|i-j|}\mid x_i=x,\ x_j=x'\right].</span></div>
 <p>A conditional bias–variance decomposition separates the loss into regression onto <span class="math-tex">R_T</span> and a term independent of the encoder. Minimizing the population loss is therefore equivalent to minimizing the expected squared error between embedding similarity and <span class="math-tex">R_T</span>. The next result identifies this target for long trajectories.</p>
 <div class="theory-result" id="successor-measure">
-<p><span class="result-label">Theorem 4</span></p>
+<span class="result-label">Theorem 4</span>
 <h3>Population target</h3>
 <p>Under the assumptions above, for every pair <span class="math-tex">x,x'\in\mathcal S</span>,</p>
 <div class="equation"><span class="math-tex" data-display="true">\begin{aligned}
@@ -297,7 +297,7 @@ T R_T(x,x')\xrightarrow[T\to\infty]{}&amp;\frac{M^\beta(x,x')}{\mu(x')}+\frac{M^
 <h3>Comparing kernels for linear probing</h3>
 <p>The paper’s additional kernel-dominance result asks when one kernel is at least as useful as another for every linear probe target. At a zero-loss optimum with fixed row norms, the encoder’s column space is determined by the target’s cosine Gram matrix. Dominance therefore amounts to inclusion of the spaces of linearly recoverable targets.</p>
 <div class="theory-result" id="kernel-dominance">
-<p><span class="result-label">Theorem 5 · Appendix</span></p>
+<span class="result-label">Theorem 5 · Appendix</span>
 <h3>Kernel dominance</h3>
 <p>Take two centered, tempered targets of rank at most <span class="math-tex">d</span> with positive diagonals, and global minimizers with row norm <span class="math-tex">\sqrt d</span>. Define their cosine Gram matrices by <span class="math-tex">K^{\mathrm{cos}}_{ik}=K^\alpha_{ik}/\sqrt{K^\alpha_{ii}K^\alpha_{kk}}</span>. The first kernel gives no greater optimal linear-probe error for every target <span class="math-tex">Y</span> if and only if</p>
 <div class="equation"><span class="math-tex" data-display="true">\operatorname{col}(K_2^{\mathrm{cos}})\subseteq\operatorname{col}(K_1^{\mathrm{cos}}).</span></div>
