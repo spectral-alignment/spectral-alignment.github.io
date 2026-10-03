@@ -38,7 +38,7 @@ class MarkdownPublishingTests(unittest.TestCase):
         config['figures']['pipeline']['alt'] = 'Updated figure description.'
         config['explorer']['wide'] = 'Updated slider explanation.'
         config['ui']['expanded_figure'] = 'Image preview'
-        body = body.replace('## What should a world model preserve?', '## Updated introduction')
+        body = re.sub(r'^## .* \{#overview\}$', '## Updated introduction {#overview}', body, count=1, flags=re.M)
         body = re.sub(r'(?<=:::lead\n).*?(?=\n:::)', 'An updated introduction from Markdown.', body, count=1, flags=re.S)
         body = body.replace('**Figure 1. Planning success.**', '**Updated planning caption.**')
         body = body.replace('| OGBench Scene average | 0.84 | **0.93** |', '| OGBench Scene average | 0.84 | **0.94** |')
