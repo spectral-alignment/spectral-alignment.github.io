@@ -355,9 +355,9 @@ Selected columns from the paper’s Table 1: linear probe $R^2$ on held-out OGBe
 **Figure 3. Spectral recovery.** Linear probe $R^2$ between kernel eigenvectors and embeddings from encoders trained on fully specified state, proprioception, and depth. Underspecified variants and an untrained encoder are included for comparison.
 :::
 
-The spectral-recovery result below characterizes optimal embeddings through the teacher kernel’s eigenvectors, up to row scaling and an orthogonal transformation. Here, we test that connection by fitting linear probes to recover each eigenvector from the learned representations. Recovery is strongest for the leading eigenvectors and decreases for directions associated with smaller eigenvalues.
+We evaluate the method's ability to recover spectral embeddings by by fitting linear probes to each eigenvector from the model embeddings. Recovery is strongest for eigenvectors associated with large eigenvalues and decreases as relative contribution decreases.
 
-The state kernel’s lower recovery scores at later indices largely reflect its less even spectrum: most of its energy is concentrated in the leading directions. Weighting each eigenvector’s probe $R^2$ by its normalized eigenvalue gives mean scores of **0.965 for state, 0.987 for proprioception, and 0.992 for depth**. The models therefore recover the directions carrying most of the kernel’s energy particularly well.
+The state kernel's lower recovery scores at later indices is largely a function of its less even distribution of magnitude across eigenvalues. Weighting each eigenvector’s probe $R^2$ by its normalized eigenvalue gives mean scores of 0.965 for state, 0.987 for proprioception, and 0.992 for depth.
 
 ## Additional ablations {#ablations}
 
