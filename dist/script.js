@@ -41,7 +41,8 @@ function drawKernel() {
 slider?.addEventListener('input',drawKernel);drawKernel();
 // Shuffle the equal-contribution pair only; keep the other authors in paper order.
 const equalAuthors = document.getElementById('equal-author-names');
-if (equalAuthors && equalAuthors.children.length > 1 && Math.random() < .5) equalAuthors.prepend(equalAuthors.lastElementChild);
+// Keep the first listed author first with probability 0.505.
+if (equalAuthors && equalAuthors.children.length > 1 && Math.random() < .495) equalAuthors.prepend(equalAuthors.lastElementChild);
 for (const element of document.querySelectorAll('.math-tex')) {
   katex.render(element.textContent, element, {displayMode:element.dataset.display==='true',throwOnError:true,trust:false,output:'htmlAndMathml'});
 }
