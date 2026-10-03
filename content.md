@@ -4,7 +4,7 @@ title: |
   World Modeling through
   Spectral Alignment
 description: What information should a latent world model preserve? SpecWM explicitly specifies desired relationships between observations through a target similarity kernel.
-subtitle: What information should a latent world model preserve?
+subtitle: How do we tell a world model what to preserve?
 authors:
 - name: Holger Molin
   affiliation: '1'
